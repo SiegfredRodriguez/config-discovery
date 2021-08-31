@@ -1,12 +1,25 @@
 {
   "name": "config-chain",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "",
   "main": "index.js",
+  "dependencies": {
+    "denque": "^2.0.1"
+  },
   "scripts": {
+    "run": "node Main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "keywords": [
+    "config",
+    "configmap",
+    "secret",
+    "kubernetes",
+    "chain",
+    "discovery",
+    "container",
+    "docker"
+  ],
+  "author": "J-dar Siegefred Rodriguez <siegfred.rodriguez@gmail.com> (https://codegallery.io)",
+  "license": "Apache-2.0"
 }
