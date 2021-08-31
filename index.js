@@ -1,6 +1,11 @@
 let Denque = require('denque')
 let fs = require('fs');
 
+const SourceType = Object.seal({
+    PATH: 'path',
+    ENV_PROTOTYPE: 'ENV_PROTOTYPE'
+});
+
 function ConfigChain(configName, options = {parser: JSON.parse}) {
     this.meta = {configName: configName, parser: options.parser}
     this.meta.configQueue = new Denque();
@@ -11,9 +16,18 @@ function ConfigChain(configName, options = {parser: JSON.parse}) {
     return this;
 }
 
-function _monolithOf(directoryName, options = {}) {
+function _monolithOf(source, options = {type: SourceType.PATH}) {
     this.meta.isComposite = false;
-    this.meta.configQueue.push(directoryName);
+
+    let value = undefined;
+
+    if (options.type === SourceType.PATH) {
+        value = source;
+    } else {
+        value = _pullEnvironmentPrototype(source);
+    }
+
+    this.meta.configQueue.push(value);
 
     this.or = _nextDirectory.bind(this);
     this.load = _loadFirstFound.bind(this);
@@ -24,10 +38,19 @@ function _monolithOf(directoryName, options = {}) {
     return this;
 }
 
-function _compositeOf(directoryName, options = {overrideOldFields: true}) {
+function _compositeOf(source, options = {overrideOldFields: true, type: SourceType.PATH}) {
     this.meta.isComposite = true;
     this.meta.overrideOldFields = options.overrideOldFields;
-    this.meta.configQueue.push(directoryName);
+
+    let value = undefined;
+
+    if (options.type === SourceType.PATH) {
+        value = source;
+    } else {
+        value = _pullEnvironmentPrototype(source);
+    }
+
+    this.meta.configQueue.push(value);
 
     this.and = _nextDirectory.bind(this);
     this.load = _composeConfig.bind(this);
@@ -38,31 +61,46 @@ function _compositeOf(directoryName, options = {overrideOldFields: true}) {
     return this;
 }
 
-function _nextDirectory(directoryName) {
-    this.meta.configQueue.push(directoryName);
+function _nextDirectory(source, options = {type: SourceType.PATH}) {
+
+    let value = undefined;
+
+    if (options.type === SourceType.PATH) {
+        value = source;
+    } else {
+        value = _pullEnvironmentPrototype(source);
+    }
+
+    this.meta.configQueue.push(value);
+
     return this;
 }
 
-function _nextEnv(configPrototype) {
-    return this;
-}
 
 function _composeConfig(defaultConfig = {}) {
 
     const {configQueue, configName, overrideOldFields, parser} = this.meta;
 
-    let nextPath = overrideOldFields ? configQueue.shift.bind(configQueue) : configQueue.pop.bind(configQueue);
+    let nextSource = overrideOldFields ? configQueue.shift.bind(configQueue) : configQueue.pop.bind(configQueue);
 
     let result = {};
 
     while (!configQueue.isEmpty()) {
-        let filePath = `${nextPath()}/${configName}`;
 
-        if (!fs.existsSync(filePath)) {
-            continue;
+        let source = nextSource();
+        let configValue = source;
+
+        if (typeof source === 'string') {
+            let filePath = `${source}/${configName}`;
+
+            if (!fs.existsSync(filePath)) {
+                continue;
+            }
+
+            configValue = parser(fs.readFileSync(filePath))
         }
 
-        _mergeConfigs(result, parser(fs.readFileSync(filePath)));
+        _mergeConfigs(result, configValue);
     }
 
     return (Object.keys(result).length > 0) ? result : defaultConfig;
@@ -98,5 +136,14 @@ function _mergeConfigs(target, source) {
     return target;
 }
 
+function _pullEnvironmentPrototype(prototype) {
+    let result = {};
+
+    Object.keys(prototype)
+        .forEach(key => result[key] = process.env[prototype[key]]);
+
+    return result
+}
 
 module.exports.ConfigChain = ConfigChain
+module.exports.SourceType = SourceType;
