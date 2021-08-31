@@ -1,9 +1,9 @@
-let Denque = require('denque');
+let Denque = require('denque')
 let fs = require('fs');
 
 function ConfigChain(configName, options = {parser: JSON.parse}) {
     this.meta = {configName: configName, parser: options.parser}
-    this.meta.pathQueue = new Denque();
+    this.meta.configQueue = new Denque();
 
     this.compositeOf = _compositeOf.bind(this);
     this.monolithOf = _monolithOf.bind(this);
@@ -13,7 +13,7 @@ function ConfigChain(configName, options = {parser: JSON.parse}) {
 
 function _monolithOf(directoryName, options = {}) {
     this.meta.isComposite = false;
-    this.meta.pathQueue.push(directoryName);
+    this.meta.configQueue.push(directoryName);
 
     this.or = _nextDirectory.bind(this);
     this.load = _loadFirstFound.bind(this);
@@ -27,7 +27,7 @@ function _monolithOf(directoryName, options = {}) {
 function _compositeOf(directoryName, options = {overrideOldFields: true}) {
     this.meta.isComposite = true;
     this.meta.overrideOldFields = options.overrideOldFields;
-    this.meta.pathQueue.push(directoryName);
+    this.meta.configQueue.push(directoryName);
 
     this.and = _nextDirectory.bind(this);
     this.load = _composeConfig.bind(this);
@@ -39,19 +39,23 @@ function _compositeOf(directoryName, options = {overrideOldFields: true}) {
 }
 
 function _nextDirectory(directoryName) {
-    this.meta.pathQueue.push(directoryName);
+    this.meta.configQueue.push(directoryName);
+    return this;
+}
+
+function _nextEnv(configPrototype) {
     return this;
 }
 
 function _composeConfig(defaultConfig = {}) {
 
-    const {pathQueue, configName, overrideOldFields, parser} = this.meta;
+    const {configQueue, configName, overrideOldFields, parser} = this.meta;
 
-    let nextPath = overrideOldFields ? pathQueue.shift.bind(pathQueue) : pathQueue.pop.bind(pathQueue);
+    let nextPath = overrideOldFields ? configQueue.shift.bind(configQueue) : configQueue.pop.bind(configQueue);
 
     let result = {};
 
-    while (!pathQueue.isEmpty()) {
+    while (!configQueue.isEmpty()) {
         let filePath = `${nextPath()}/${configName}`;
 
         if (!fs.existsSync(filePath)) {
@@ -61,17 +65,17 @@ function _composeConfig(defaultConfig = {}) {
         _mergeConfigs(result, parser(fs.readFileSync(filePath)));
     }
 
-    return (Object.keys(result) > 0) ? result : defaultConfig;
+    return (Object.keys(result).length > 0) ? result : defaultConfig;
 }
 
 function _loadFirstFound(defaultConfig = {}) {
 
-    const {pathQueue, configName, parser} = this.meta;
-    let nextPath = pathQueue.shift.bind(pathQueue);
+    const {configQueue, configName, parser} = this.meta;
+    let nextPath = configQueue.shift.bind(configQueue);
 
     let result = {};
 
-    while (!pathQueue.isEmpty()) {
+    while (!configQueue.isEmpty()) {
         let filePath = `${nextPath()}/${configName}`;
 
         if (!fs.existsSync(filePath)) {
@@ -82,7 +86,7 @@ function _loadFirstFound(defaultConfig = {}) {
         break;
     }
 
-    return (Object.keys(result) > 0) ? result : defaultConfig;
+    return (Object.keys(result).length > 0) ? result : defaultConfig;
 }
 
 function _mergeConfigs(target, source) {
