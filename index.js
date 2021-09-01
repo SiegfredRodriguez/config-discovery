@@ -1,131 +1,148 @@
-let Denque = require('denque')
 let fs = require('fs');
 
 const SourceType = Object.seal({
-    PATH: 'path',
+    PATH: 'PATH',
     ENV_PROTOTYPE: 'ENV_PROTOTYPE'
 });
 
-function ConfigChain(configName, options = {parser: JSON.parse}) {
-    this.meta = {configName: configName, parser: options.parser}
-    this.meta.configQueue = new Denque();
+class Config {
+    #meta;
 
-    this.compositeOf = _compositeOf.bind(this);
-    this.monolithOf = _monolithOf.bind(this);
-
-    return this;
-}
-
-function _monolithOf(source, options = {type: SourceType.PATH}) {
-    this.meta.isComposite = false;
-
-    let value = undefined;
-
-    if (options.type === SourceType.PATH) {
-        value = source;
-    } else {
-        value = _pullEnvironmentPrototype(source);
+    constructor(options = {parser: JSON.parse}) {
+        this.#meta = {config: {}, parser: options.parser};
     }
 
-    this.meta.configQueue.push(value);
+    /**
+     * Will try to load initial config from provided
+     * absolutePath. If config file is not found, it does nothing.
+     *
+     * @param absolutePath Possible location of a configuration file
+     * @returns FindFirstConfigProvider
+     */
+    fromFile(absolutePath) {
+        const {config, parser} = this.#meta;
 
-    this.or = _nextDirectory.bind(this);
-    this.load = _loadFirstFound.bind(this);
+        if (fs.existsSync(absolutePath)) {
+            let byteData = fs.readFileSync(absolutePath);
+            let object = parser(byteData);
 
-    delete this.compositeOf;
-    delete this.monolithOf;
+            _mergeConfigs(config, object);
 
-    return this;
+            this.#meta.foundFirst = true;
+        }
+
+        let metadata = this.#meta;
+        this.#meta = undefined;
+        return new FindFirstConfigProvider(metadata);
+    }
 }
 
-function _compositeOf(source, options = {overrideOldFields: true, type: SourceType.PATH}) {
-    this.meta.isComposite = true;
-    this.meta.overrideOldFields = options.overrideOldFields;
+class FindFirstConfigProvider {
+    #meta
 
-    let value = undefined;
-
-    if (options.type === SourceType.PATH) {
-        value = source;
-    } else {
-        value = _pullEnvironmentPrototype(source);
+    constructor(meta) {
+        this.#meta = meta;
     }
 
-    this.meta.configQueue.push(value);
+    /**
+     * Will try to load configuration if the previous
+     * attempt from fromFile() or another or() failed.
+     * @param absolutePath Possible location of a configuration file
+     * @returns FindFirstConfigProvider
+     */
+    or(absolutePath) {
+        const {config, parser, foundFirst} = this.#meta;
 
-    this.and = _nextDirectory.bind(this);
-    this.load = _composeConfig.bind(this);
+        if (!foundFirst) {
+            if (fs.existsSync(absolutePath)) {
+                let byteData = fs.readFileSync(absolutePath);
+                let object = parser(byteData);
 
-    delete this.compositeOf;
-    delete this.monolithOf;
+                _mergeConfigs(config, object);
 
-    return this;
-}
-
-function _nextDirectory(source, options = {type: SourceType.PATH}) {
-
-    let value = undefined;
-
-    if (options.type === SourceType.PATH) {
-        value = source;
-    } else {
-        value = _pullEnvironmentPrototype(source);
-    }
-
-    this.meta.configQueue.push(value);
-
-    return this;
-}
-
-
-function _composeConfig(defaultConfig = {}) {
-
-    const {configQueue, configName, overrideOldFields, parser} = this.meta;
-
-    let nextSource = overrideOldFields ? configQueue.shift.bind(configQueue) : configQueue.pop.bind(configQueue);
-
-    let result = {};
-
-    while (!configQueue.isEmpty()) {
-
-        let source = nextSource();
-        let configValue = source;
-
-        if (typeof source === 'string') {
-            let filePath = `${source}/${configName}`;
-
-            if (!fs.existsSync(filePath)) {
-                continue;
+                this.#meta.foundFirst = true;
             }
-
-            configValue = parser(fs.readFileSync(filePath))
         }
 
-        _mergeConfigs(result, configValue);
+        return this;
     }
 
-    return (Object.keys(result).length > 0) ? result : defaultConfig;
+    /**
+     * Marks the transition from finding first config to
+     * patching current config from another config file
+     * or config assembled from the environment.
+     * @returns PatchingConfigProvider
+     */
+    thenPatchWith() {
+        let metadata = this.#meta;
+        this.#meta = undefined;
+        return new PatchingConfigProvider(metadata);
+    }
+
+    /**
+     * Will return the configuration.
+     * @returns JSON
+     */
+    get() {
+        return this.#meta.config;
+    }
 }
 
-function _loadFirstFound(defaultConfig = {}) {
+class PatchingConfigProvider {
+    #meta
 
-    const {configQueue, configName, parser} = this.meta;
-    let nextPath = configQueue.shift.bind(configQueue);
+    constructor(meta) {
+        this.#meta = meta;
+    }
 
-    let result = {};
+    /**
+     * Will try to load specified config file,
+     * and override any existing config key, and append non existing ones.
+     * @param absolutePath Possible location of a configuration file
+     * @returns PatchingConfigProvider
+     */
+    configFile(absolutePath) {
+        const {config, parser} = this.#meta;
 
-    while (!configQueue.isEmpty()) {
-        let filePath = `${nextPath()}/${configName}`;
+        if (fs.existsSync(absolutePath)) {
+            let byteData = fs.readFileSync(absolutePath);
+            let object = parser(byteData);
 
-        if (!fs.existsSync(filePath)) {
-            continue;
+            _mergeConfigs(config, object);
+
+            this.#meta.foundFirst = true;
         }
 
-        result = parser(fs.readFileSync(filePath))
-        break;
+        return this;
     }
 
-    return (Object.keys(result).length > 0) ? result : defaultConfig;
+    /**
+     * Will try to *assemble* a config based from provided prototype object,
+     * and override any existing config key, and append non existing ones.
+     *
+     *  Currently only support string valued ENV_VARS (no structure data value support yet).
+     *
+     *  PROTOTYPE format:
+     *  {
+     *      jsonKey1 : ENVIRONMENT_VARIABLE_NAME_1,
+     *      jsonKey2: ENV
+     *  }
+     *
+     * @param prototype Prototype of expected object from the environment.
+     * @returns PatchingConfigProvider
+     */
+    patchWithEnv(prototype) {
+        let envObject = _pullEnvironmentPrototype(prototype);
+        _mergeConfigs(this.#meta.config, envObject);
+
+        return this;
+    }
+
+    get() {
+        return this.#meta.config;
+    }
 }
+
 
 function _mergeConfigs(target, source) {
 
@@ -136,14 +153,30 @@ function _mergeConfigs(target, source) {
     return target;
 }
 
+/**
+ *
+ *  All or nothing approach, if expected fields in prototype is not satisfied,
+ *  return empty.
+ *
+ * */
 function _pullEnvironmentPrototype(prototype) {
     let result = {};
 
-    Object.keys(prototype)
-        .forEach(key => result[key] = process.env[prototype[key]]);
+    let prototypeKeys = Object.keys(prototype);
 
-    return result
+    for (let key of prototypeKeys) {
+        let value = process.env[prototype[key]];
+
+        if (value === undefined) {
+            result = {};
+            break;
+        }
+
+        result[key] = value;
+    }
+
+    return result;
 }
 
-module.exports.ConfigChain = ConfigChain
+module.exports.Config = Config
 module.exports.SourceType = SourceType;
