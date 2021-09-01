@@ -150,6 +150,8 @@ function _mergeConfigs(target, source) {
 
 /**
  *
+ *  WARNING: Recursive, will try to improve.
+ *
  *  All or nothing approach, if expected fields in prototype is not satisfied,
  *  return empty.
  *
@@ -160,7 +162,13 @@ function _pullEnvironmentPrototype(prototype) {
     let prototypeKeys = Object.keys(prototype);
 
     for (let key of prototypeKeys) {
-        let value = process.env[prototype[key]];
+        let value = undefined;
+
+        if (typeof prototype[key] === 'object') {
+            value = _pullEnvironmentPrototype(prototype[key]);
+        } else {
+            value = process.env[prototype[key]];
+        }
 
         if (value === undefined) {
             result = {};
@@ -173,4 +181,4 @@ function _pullEnvironmentPrototype(prototype) {
     return result;
 }
 
-module.exports.Config = Config
+module.exports = Config
