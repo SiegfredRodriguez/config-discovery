@@ -142,7 +142,17 @@ class PatchingConfigProvider {
 function _mergeConfigs(target, source) {
 
     Object.keys(source).forEach(key => {
-        target[key] = source[key];
+        let obj = source[key];
+
+        if (typeof obj === 'object') {
+            if (target[key] !== undefined && target[key] !== null) {
+                _mergeConfigs(target[key], obj);
+            } else {
+                target[key] = source[key];
+            }
+        } else {
+            target[key] = source[key];
+        }
     });
 
     return target;
