@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "ENV_VAL_ONE='value one from env.' ENV_VAL_TWO='value two from env.' ENV_VAL_THREE='value three from env.' c8 --reporter=lcov mocha test/test.js"
+    "test": "ENV_VAL_ONE='value one from env.' ENV_VAL_TWO='value two from env.' ENV_VAL_THREE='value three from env.' c8 --reporter=lcov mocha test/test.js && codecov"
   },
   "devDependencies": {
     "mocha": "^9.1.1",
