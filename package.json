@@ -16,6 +16,10 @@
     "container",
     "docker"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SiegfredRodriguez/config-chain.git"
+  },
   "author": "J-dar Siegefred Rodriguez <siegfred.rodriguez@gmail.com> (https://codegallery.io)",
   "license": "Apache-2.0"
 }

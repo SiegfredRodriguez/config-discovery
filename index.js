@@ -174,4 +174,3 @@ function _pullEnvironmentPrototype(prototype) {
 }
 
 module.exports.Config = Config
-module.exports.SourceType = SourceType;
