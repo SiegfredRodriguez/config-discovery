@@ -191,4 +191,4 @@ function _pullEnvironmentPrototype(prototype) {
     return result;
 }
 
-module.exports.Config = Config
+module.exports = Config
