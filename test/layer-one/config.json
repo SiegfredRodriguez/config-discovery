@@ -1,0 +1,12 @@
+{
+  "simple_keyone": "value one from layer 1 config.json",
+  "simple_keytwo": "value two from layer 1 config.json",
+
+  "nested_valuethree": {
+    "simple_valuethree_a": "value 3_a from layer 1 config.json",
+    "nested_valuethree_b": {
+      "simple_valuethree_b_a": "value 3_b_a from layer 1 config.json",
+      "simple_valuethree_b_b": "value 3_b_b from layer 1 config.json"
+    }
+  }
+}
