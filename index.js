@@ -1,10 +1,5 @@
 let fs = require('fs');
 
-const SourceType = Object.seal({
-    PATH: 'PATH',
-    ENV_PROTOTYPE: 'ENV_PROTOTYPE'
-});
-
 class Config {
     #meta;
 
