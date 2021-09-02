@@ -30,6 +30,29 @@ class Config {
         this.#meta = undefined;
         return new FindFirstConfigProvider(metadata);
     }
+
+    /**
+     * Will try to load initial config from the environment based
+     * on provided prototype. If prototype is not satisfied it does.
+     * nothing.
+     *
+     * @param prototype Possible location of a configuration file
+     * @returns FindFirstConfigProvider
+     */
+    fromEnv(prototype) {
+        const {config} = this.#meta;
+
+        let result = _pullEnvironmentPrototype(prototype);
+
+        if (Object.keys(result).length > 0) {
+            _mergeConfigs(config, result);
+            this.#meta.foundFirst = true;
+        }
+
+        let metadata = this.#meta;
+        this.#meta = undefined;
+        return new FindFirstConfigProvider(metadata);
+    }
 }
 
 class FindFirstConfigProvider {
@@ -180,7 +203,7 @@ function _pullEnvironmentPrototype(prototype) {
             value = process.env[prototype[key]];
         }
 
-        if (value === undefined) {
+        if (value === undefined || value === {}) {
             result = {};
             break;
         }

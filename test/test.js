@@ -14,6 +14,15 @@ const LAYER_ONE_CONFIG_JSON = JSON.parse(fs.readFileSync(LAYER_ONE_CONFIG_JSON_P
 const LAYER_ONE_B_CONFIG_JSON = JSON.parse(fs.readFileSync(LAYER_ONE_B_CONFIG_JSON_PATH));
 const LAYER_ONE_PATCH_JSON = JSON.parse(fs.readFileSync(LAYER_ONE_PATCH_JSON_PATH));
 
+let ENV_KEY_1 = 'ENV_VAL_ONE';
+let ENV_KEY_2 = 'ENV_VAL_TWO';
+let ENV_KEY_3 = 'ENV_VAL_THREE';
+
+let ENV_VALUE_1 = process.env[ENV_KEY_1];
+let ENV_VALUE_2 = process.env[ENV_KEY_2];
+let ENV_VALUE_3 = process.env[ENV_KEY_3];
+
+
 describe(
     'Config', () => {
         describe('fromFile()', () => {
@@ -28,6 +37,53 @@ describe(
                 it('should return empty json when parameter is not found or not valid.', () => {
                         let conf = new Config()
                             .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                            .get();
+
+                        assert.deepStrictEqual(conf, {});
+                    }
+                )
+
+            }
+        );
+        describe('fromEnv()', () => {
+                it('should return loaded config when prototype is satisfied.', () => {
+
+                        let prototype = {
+                            field_one: ENV_KEY_1,
+                            field_two: ENV_KEY_2,
+                            field_three: {
+                                field_three_a: ENV_KEY_3
+                            }
+                        };
+
+                        let expected = {
+                            field_one: ENV_VALUE_1,
+                            field_two: ENV_VALUE_2,
+                            field_three: {
+                                field_three_a: ENV_VALUE_3
+                            }
+                        };
+
+
+                        let conf = new Config()
+                            .fromEnv(prototype)
+                            .get();
+
+                        assert.deepStrictEqual(conf, expected);
+                    }
+                );
+                it('should return empty json when when prototype is not satisfied.', () => {
+
+                        let prototype = {
+                            field_one: ENV_KEY_1,
+                            field_two: 'I_DONT_EXIST',
+                            field_three: {
+                                field_three_a: ENV_KEY_3
+                            }
+                        };
+
+                        let conf = new Config()
+                            .fromEnv(prototype)
                             .get();
 
                         assert.deepStrictEqual(conf, {});
@@ -100,10 +156,10 @@ describe('PatchingConfigProvider', () => {
                 it('should patch previous result with new values from patch', () => {
 
                         let prototype = {
-                            simple_keyone: 'ENV_VAL_ONE',
-                            simple_keytwo: 'ENV_VAL_TWO',
+                            simple_keyone: ENV_KEY_1,
+                            simple_keytwo: ENV_KEY_2,
                             nested_valuethree: {
-                                simple_valuethree_a: 'ENV_VAL_THREE'
+                                simple_valuethree_a: ENV_KEY_3
                             }
                         };
 
@@ -113,15 +169,11 @@ describe('PatchingConfigProvider', () => {
                             .patchWithEnv(prototype)
                             .get();
 
-                        let EV_1 = 'value one from env.';
-                        let EV_2 = 'value two from env.';
-                        let EV_3 = 'value three from env.';
-
-                        assert.deepStrictEqual(conf['simple_keyone'], EV_1);
-                        assert.deepStrictEqual(conf['simple_keytwo'], EV_2);
+                        assert.deepStrictEqual(conf['simple_keyone'], ENV_VALUE_1);
+                        assert.deepStrictEqual(conf['simple_keytwo'], ENV_VALUE_2);
 
                         // Sanity check for nested JSON
-                        assert.deepStrictEqual(conf['nested_valuethree']['simple_valuethree_a'], EV_3);
+                        assert.deepStrictEqual(conf['nested_valuethree']['simple_valuethree_a'], ENV_VALUE_3);
                     }
                 );
                 it('should ignore when prototype cannot be satisfied', () => {
