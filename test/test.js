@@ -45,6 +45,38 @@ describe(
 
             }
         );
+        describe('fromObject()', () => {
+                it('should return loaded config when parameter is valid.', () => {
+                        let jsonObject = {field: 'Some value '};
+
+                        let conf = new Config()
+                            .fromObject(jsonObject)
+                            .get();
+
+                        assert.deepStrictEqual(conf, jsonObject);
+                    }
+                );
+                it('should return empty json when parameter is not found or not valid.', () => {
+                        let emptyObject = new Config()
+                            .fromObject({})
+                            .get();
+
+                        let nullObject = new Config()
+                            .fromObject({})
+                            .get();
+
+                        let undefinedObject = new Config()
+                            .fromObject({})
+                            .get();
+
+                        assert.deepStrictEqual(emptyObject, {});
+                        assert.deepStrictEqual(nullObject, {});
+                        assert.deepStrictEqual(undefinedObject, {});
+                    }
+                )
+
+            }
+        );
         describe('fromEnv()', () => {
                 it('should return loaded config when prototype is satisfied.', () => {
 

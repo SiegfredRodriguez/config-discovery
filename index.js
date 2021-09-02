@@ -53,6 +53,26 @@ class Config {
         this.#meta = undefined;
         return new FindFirstConfigProvider(metadata);
     }
+
+    /**
+     * Will try to load initial config from provided object,
+     * if jsonObject is empty or not valid, will ignore.
+     *
+     * @param jsonObject Possible location of a configuration file
+     * @returns FindFirstConfigProvider
+     */
+    fromObject(jsonObject) {
+        const {config} = this.#meta;
+
+        if (jsonObject && Object.keys(jsonObject).length > 0) {
+            _mergeConfigs(config, jsonObject);
+            this.#meta.foundFirst = true;
+        }
+
+        let metadata = this.#meta;
+        this.#meta = undefined;
+        return new FindFirstConfigProvider(metadata);
+    }
 }
 
 class FindFirstConfigProvider {
