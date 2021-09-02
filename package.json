@@ -1,6 +1,6 @@
 {
   "name": "config-discovery",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "A simple JSON configuration loading and compositing utility.",
   "main": "index.js",
   "scripts": {
