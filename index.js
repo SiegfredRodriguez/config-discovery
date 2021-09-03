@@ -31,7 +31,7 @@ class Config {
      * on provided prototype. If prototype is not satisfied it does.
      * nothing.
      *
-     * @param prototype Possible location of a configuration file
+     * @param prototype Prototype for an object to generate from the ENV
      * @returns FindFirstConfigProvider
      */
     fromEnv(prototype) {
@@ -48,7 +48,7 @@ class Config {
      * Will try to load initial config from provided object,
      * if jsonObject is empty or not valid, will ignore.
      *
-     * @param jsonObject Possible location of a configuration file
+     * @param jsonObject A possibly non empty object
      * @returns FindFirstConfigProvider
      */
     fromObject(jsonObject) {
@@ -73,8 +73,8 @@ class FindFirstConfigProvider {
     }
 
     /**
-     * Will try to load configuration if the previous
-     * attempt from fromFile() or another or() failed.
+     * Will try to load configuration from absolutePath if the previous
+     * attempts from from*() or another or*() failed.
      * @param absolutePath Possible location of a configuration file
      * @returns FindFirstConfigProvider
      */
@@ -96,18 +96,59 @@ class FindFirstConfigProvider {
     }
 
     /**
-     * Will try to load initial config from provided object,
-     * if jsonObject is empty or not valid, will ignore.
-     *
-     * @param jsonObject Possible location of a configuration file
+     * Will try to load configuration from absolutePath if the previous
+     * attempts from from*() or another or*() failed.
+     * @param absolutePath Possible location of a configuration file
+     * @returns FindFirstConfigProvider
+     */
+    orFile(absolutePath) {
+        const {parser, foundFirst} = this.#meta;
+
+        if (!foundFirst) {
+            if (fs.existsSync(absolutePath)) {
+                let byteData = fs.readFileSync(absolutePath);
+                let object = parser(byteData);
+                this.orObject(object);
+            }
+        }
+
+        return this;
+    }
+
+    /**
+     * Will try to load configuration from environment
+     * based on provided prototype if the previous
+     * attempts from from*() or another or*() failed.
+     * @param prototype Prototype for an object to generate from the ENV
+     * @returns FindFirstConfigProvider
+     */
+    orEnv(prototype) {
+        const {foundFirst} = this.#meta;
+
+        if (!foundFirst) {
+            if (_isDefinedNonNull(prototype) && _isNotEmpty(prototype)) {
+                let object = _pullEnvironmentPrototype(prototype);
+                this.orObject(object);
+            }
+        }
+
+        return this;
+    }
+
+    /**
+     * Will try to load configuration from provided object if the previous
+     * attempt from from*() or another or*() failed.
+     * @param jsonObject A possibly non empty jsonObject
      * @returns FindFirstConfigProvider
      */
     orObject(jsonObject) {
-        const {config} = this.#meta;
+        const {config, foundFirst} = this.#meta;
 
-        if (_isDefinedNonNull(jsonObject) && _isNotEmpty(jsonObject)) {
-            _mergeConfigs(config, jsonObject);
-            this.#meta.foundFirst = true;
+        if (!foundFirst) {
+            if (_isDefinedNonNull(jsonObject) && _isNotEmpty(jsonObject)) {
+                _mergeConfigs(config, jsonObject);
+                this.#meta.foundFirst = true;
+            }
         }
 
         return this;

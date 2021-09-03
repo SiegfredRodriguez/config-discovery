@@ -129,8 +129,10 @@ describe(
 
 describe(
     'FindFirstConfigProvider', () => {
+        // Will deprecate soon
         describe('or()', () => {
-                it('should return first found configuration', () => {
+                it('should not load if config is already found.', () => {
+
                         let conf = new Config()
                             .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
                             .or(LAYER_ONE_B_CONFIG_JSON_PATH)
@@ -139,11 +141,33 @@ describe(
                         assert.deepStrictEqual(conf, LAYER_ONE_CONFIG_JSON);
                     }
                 );
-                it('should return next config when found, then stop.', () => {
+                it('should load if config is not yet found.', () => {
                         let conf = new Config()
                             .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
                             .or(LAYER_ONE_B_CONFIG_JSON_PATH)
-                            .or(LAYER_ONE_CONFIG_JSON_PATH)
+                            .get();
+
+                        assert.deepStrictEqual(conf, LAYER_ONE_B_CONFIG_JSON);
+                    }
+                )
+
+            }
+        );
+        describe('orFile()', () => {
+                it('should not load if config is already found.', () => {
+
+                        let conf = new Config()
+                            .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
+                            .orFile(LAYER_ONE_B_CONFIG_JSON_PATH)
+                            .get();
+
+                        assert.deepStrictEqual(conf, LAYER_ONE_CONFIG_JSON);
+                    }
+                );
+                it('should load if config is not yet found.', () => {
+                        let conf = new Config()
+                            .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                            .orFile(LAYER_ONE_B_CONFIG_JSON_PATH)
                             .get();
 
                         assert.deepStrictEqual(conf, LAYER_ONE_B_CONFIG_JSON);
@@ -153,9 +177,20 @@ describe(
             }
         );
         describe('orObject()', () => {
-                it('should return first found object configuration', () => {
+                it('should not load if config is already found.', () => {
 
-                        let object = { data: 'Some data' };
+                        let object = {data: 'Some data'};
+
+                        let conf = new Config()
+                            .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
+                            .orObject(object)
+                            .get();
+
+                        assert.deepStrictEqual(conf, LAYER_ONE_CONFIG_JSON);
+                    }
+                );
+                it('should load if config is not yet found.', () => {
+                        let object = {data: 'Some data'};
 
                         let conf = new Config()
                             .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
@@ -164,17 +199,53 @@ describe(
 
                         assert.deepStrictEqual(conf, object);
                     }
+                )
+
+            }
+        );
+        describe('orEnv()', () => {
+                it('should not load if config is already found.', () => {
+
+                        let prototype = {
+                            field_one: ENV_KEY_1,
+                            field_two: ENV_KEY_2,
+                            field_three: {
+                                field_three_a: ENV_KEY_3
+                            }
+                        };
+
+                        let conf = new Config()
+                            .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
+                            .orEnv(prototype)
+                            .get();
+
+                        assert.deepStrictEqual(conf, LAYER_ONE_CONFIG_JSON);
+                    }
                 );
-                it('should return next config when found, then stop.', () => {
-                    let object = { data: 'Some data' };
+                it('should load if config is not yet found.', () => {
 
-                    let conf = new Config()
-                        .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
-                        .orObject(object)
-                        .or(LAYER_ONE_CONFIG_JSON_PATH)
-                        .get();
+                        let prototype = {
+                            field_one: ENV_KEY_1,
+                            field_two: ENV_KEY_2,
+                            field_three: {
+                                field_three_a: ENV_KEY_3
+                            }
+                        };
 
-                        assert.deepStrictEqual(conf, object);
+                        let expected = {
+                            field_one: ENV_VALUE_1,
+                            field_two: ENV_VALUE_2,
+                            field_three: {
+                                field_three_a: ENV_VALUE_3
+                            }
+                        };
+
+                        let conf = new Config()
+                            .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                            .orEnv(prototype)
+                            .get();
+
+                        assert.deepStrictEqual(conf, expected);
                     }
                 )
 

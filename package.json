@@ -4,13 +4,14 @@
   "description": "A simple JSON configuration loading and compositing utility.",
   "main": "index.js",
   "scripts": {
-    "test": "ENV_VAL_ONE='value one from env.' ENV_VAL_TWO='value two from env.' ENV_VAL_THREE='value three from env.' c8 --reporter=lcov mocha test/test.js",
+    "test": "c8 --reporter=lcov mocha test/test.js -r dotenv/config",
     "submit-coverage": "codecov"
   },
   "devDependencies": {
     "mocha": "^9.1.1",
     "c8": "^7.8.0",
-    "codecov": "^3.8.3"
+    "codecov": "^3.8.3",
+    "dotenv": "^10.0.0"
   },
   "dependencies": {},
   "keywords": [
