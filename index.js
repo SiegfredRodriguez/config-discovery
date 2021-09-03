@@ -230,14 +230,18 @@ class PatchingConfigProvider {
     }
 }
 
-
+/**
+ *
+ *   Merge properly, override only common keys.
+ *
+ * */
 function _mergeConfigs(target, source) {
 
     Object.keys(source).forEach(key => {
         let obj = source[key];
 
         if (typeof obj === 'object') {
-            if (target[key] !== undefined && target[key] !== null) {
+            if (_isDefinedNonNull(target[key])) {
                 _mergeConfigs(target[key], obj);
             } else {
                 target[key] = source[key];
@@ -272,7 +276,7 @@ function _pullEnvironmentPrototype(prototype) {
             value = process.env[prototype[key]];
         }
 
-        if (value === undefined || value === {}) {
+        if (!_isDefinedNonNull(value) || !_isNotEmpty(value)) {
             result = {};
             break;
         }
