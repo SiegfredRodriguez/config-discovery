@@ -96,6 +96,24 @@ class FindFirstConfigProvider {
     }
 
     /**
+     * Will try to load initial config from provided object,
+     * if jsonObject is empty or not valid, will ignore.
+     *
+     * @param jsonObject Possible location of a configuration file
+     * @returns FindFirstConfigProvider
+     */
+    orObject(jsonObject) {
+        const {config} = this.#meta;
+
+        if (_isDefinedNonNull(jsonObject) && _isNotEmpty(jsonObject)) {
+            _mergeConfigs(config, jsonObject);
+            this.#meta.foundFirst = true;
+        }
+
+        return this;
+    }
+
+    /**
      * Marks the transition from finding first config to
      * patching current config from another config file
      * or config assembled from the environment.

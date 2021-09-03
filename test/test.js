@@ -123,7 +123,7 @@ describe(
                 )
 
             }
-        )
+        );
     }
 )
 
@@ -151,7 +151,35 @@ describe(
                 )
 
             }
-        )
+        );
+        describe('orObject()', () => {
+                it('should return first found object configuration', () => {
+
+                        let object = { data: 'Some data' };
+
+                        let conf = new Config()
+                            .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                            .orObject(object)
+                            .get();
+
+                        assert.deepStrictEqual(conf, object);
+                    }
+                );
+                it('should return next config when found, then stop.', () => {
+                    let object = { data: 'Some data' };
+
+                    let conf = new Config()
+                        .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                        .orObject(object)
+                        .or(LAYER_ONE_CONFIG_JSON_PATH)
+                        .get();
+
+                        assert.deepStrictEqual(conf, object);
+                    }
+                )
+
+            }
+        );
     }
 )
 
@@ -219,6 +247,6 @@ describe('PatchingConfigProvider', () => {
                     }
                 )
             }
-        )
+        );
     }
 )
