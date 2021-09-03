@@ -15,20 +15,15 @@ class Config {
      * @returns FindFirstConfigProvider
      */
     fromFile(absolutePath) {
-        const {config, parser} = this.#meta;
+        const {parser} = this.#meta;
+        let object = {};
 
         if (fs.existsSync(absolutePath)) {
             let byteData = fs.readFileSync(absolutePath);
-            let object = parser(byteData);
-
-            _mergeConfigs(config, object);
-
-            this.#meta.foundFirst = true;
+            object = parser(byteData);
         }
 
-        let metadata = this.#meta;
-        this.#meta = undefined;
-        return new FindFirstConfigProvider(metadata);
+        return this.fromObject(object);
     }
 
     /**
@@ -40,18 +35,13 @@ class Config {
      * @returns FindFirstConfigProvider
      */
     fromEnv(prototype) {
-        const {config} = this.#meta;
+        let object = {};
 
-        let result = _pullEnvironmentPrototype(prototype);
-
-        if (Object.keys(result).length > 0) {
-            _mergeConfigs(config, result);
-            this.#meta.foundFirst = true;
+        if (_isDefinedNonNull(prototype) && _isNotEmpty(prototype)) {
+            object = _pullEnvironmentPrototype(prototype);
         }
 
-        let metadata = this.#meta;
-        this.#meta = undefined;
-        return new FindFirstConfigProvider(metadata);
+        return this.fromObject(object);
     }
 
     /**
@@ -64,7 +54,7 @@ class Config {
     fromObject(jsonObject) {
         const {config} = this.#meta;
 
-        if (jsonObject && Object.keys(jsonObject).length > 0) {
+        if (_isDefinedNonNull(jsonObject) && _isNotEmpty(jsonObject)) {
             _mergeConfigs(config, jsonObject);
             this.#meta.foundFirst = true;
         }
@@ -232,6 +222,14 @@ function _pullEnvironmentPrototype(prototype) {
     }
 
     return result;
+}
+
+function _isNotEmpty(object) {
+    return Object.keys(object).length > 0;
+}
+
+function _isDefinedNonNull(object) {
+    return (object !== undefined && object !== null);
 }
 
 module.exports = Config
