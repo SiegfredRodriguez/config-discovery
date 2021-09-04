@@ -29,6 +29,6 @@ jobs:
     - name: Test and Cover
       run: npm test
     - name: Submit coverage
-      run: npm submit-coverage
+      run: npm run submit-coverage
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_SECRET_TOKEN }}
