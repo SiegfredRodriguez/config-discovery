@@ -15,14 +15,47 @@ class Config {
      * @returns FindFirstConfigProvider
      */
     fromFile(absolutePath) {
-        const {config, parser} = this.#meta;
+        const {parser} = this.#meta;
+        let object = {};
 
         if (fs.existsSync(absolutePath)) {
             let byteData = fs.readFileSync(absolutePath);
-            let object = parser(byteData);
+            object = parser(byteData);
+        }
 
-            _mergeConfigs(config, object);
+        return this.fromObject(object);
+    }
 
+    /**
+     * Will try to load initial config from the environment based
+     * on provided prototype. If prototype is not satisfied it does.
+     * nothing.
+     *
+     * @param prototype Prototype for an object to generate from the ENV
+     * @returns FindFirstConfigProvider
+     */
+    fromEnv(prototype) {
+        let object = {};
+
+        if (_isDefinedNonNull(prototype) && _isNotEmpty(prototype)) {
+            object = _pullEnvironmentPrototype(prototype);
+        }
+
+        return this.fromObject(object);
+    }
+
+    /**
+     * Will try to load initial config from provided object,
+     * if jsonObject is empty or not valid, will ignore.
+     *
+     * @param jsonObject A possibly non empty object
+     * @returns FindFirstConfigProvider
+     */
+    fromObject(jsonObject) {
+        const {config} = this.#meta;
+
+        if (_isDefinedNonNull(jsonObject) && _isNotEmpty(jsonObject)) {
+            _mergeConfigs(config, jsonObject);
             this.#meta.foundFirst = true;
         }
 
@@ -40,8 +73,8 @@ class FindFirstConfigProvider {
     }
 
     /**
-     * Will try to load configuration if the previous
-     * attempt from fromFile() or another or() failed.
+     * @deprecated
+     * Replaced with orFile(absolutePath) for interface consistency.
      * @param absolutePath Possible location of a configuration file
      * @returns FindFirstConfigProvider
      */
@@ -55,6 +88,65 @@ class FindFirstConfigProvider {
 
                 _mergeConfigs(config, object);
 
+                this.#meta.foundFirst = true;
+            }
+        }
+
+        return this;
+    }
+
+    /**
+     * Will try to load configuration from absolutePath if the previous
+     * attempts from from*() or another or*() failed.
+     * @param absolutePath Possible location of a configuration file
+     * @returns FindFirstConfigProvider
+     */
+    orFile(absolutePath) {
+        const {parser, foundFirst} = this.#meta;
+
+        if (!foundFirst) {
+            if (fs.existsSync(absolutePath)) {
+                let byteData = fs.readFileSync(absolutePath);
+                let object = parser(byteData);
+                this.orObject(object);
+            }
+        }
+
+        return this;
+    }
+
+    /**
+     * Will try to load configuration from environment
+     * based on provided prototype if the previous
+     * attempts from from*() or another or*() failed.
+     * @param prototype Prototype for an object to generate from the ENV
+     * @returns FindFirstConfigProvider
+     */
+    orEnv(prototype) {
+        const {foundFirst} = this.#meta;
+
+        if (!foundFirst) {
+            if (_isDefinedNonNull(prototype) && _isNotEmpty(prototype)) {
+                let object = _pullEnvironmentPrototype(prototype);
+                this.orObject(object);
+            }
+        }
+
+        return this;
+    }
+
+    /**
+     * Will try to load configuration from provided object if the previous
+     * attempt from from*() or another or*() failed.
+     * @param jsonObject A possibly non empty jsonObject
+     * @returns FindFirstConfigProvider
+     */
+    orObject(jsonObject) {
+        const {config, foundFirst} = this.#meta;
+
+        if (!foundFirst) {
+            if (_isDefinedNonNull(jsonObject) && _isNotEmpty(jsonObject)) {
+                _mergeConfigs(config, jsonObject);
                 this.#meta.foundFirst = true;
             }
         }
@@ -112,23 +204,54 @@ class PatchingConfigProvider {
     }
 
     /**
-     * Will try to *assemble* a config based from provided prototype object,
-     * and override any existing config key, and append non existing ones.
-     *
-     *  Currently only support string valued ENV_VARS (no structure data value support yet).
-     *
-     *  PROTOTYPE format:
-     *  {
-     *      jsonKey1 : ENVIRONMENT_VARIABLE_NAME_1,
-     *      jsonKey2: ENV
-     *  }
+     * @deprecated
+     * Replaced with env(prototype) for interface consistency.
      *
      * @param prototype Prototype of expected object from the environment.
      * @returns PatchingConfigProvider
      */
     patchWithEnv(prototype) {
-        let envObject = _pullEnvironmentPrototype(prototype);
-        _mergeConfigs(this.#meta.config, envObject);
+
+        if (_isDefinedNonNull(prototype) && _isNotEmpty(prototype)) {
+            let envObject = _pullEnvironmentPrototype(prototype);
+            _mergeConfigs(this.#meta.config, envObject);
+        }
+        return this;
+    }
+
+
+    /**
+     *
+     *  Will try to patch current config with JSON object generated
+     *  from environment prototype.
+     *
+     * @param prototype
+     * @returns PatchingConfigProvider
+     */
+    env(prototype) {
+
+        if (_isDefinedNonNull(prototype) && _isNotEmpty(prototype)) {
+            let envObject = _pullEnvironmentPrototype(prototype);
+            this.object(envObject);
+        }
+
+        return this;
+    }
+
+    /**
+     *
+     *  Will try to patch current config with JSON object if
+     *  its is defined and not empty.
+     *
+     * @param jsonObject
+     * @returns PatchingConfigProvider
+     */
+    object(jsonObject) {
+
+        if (_isDefinedNonNull(jsonObject) && _isNotEmpty(jsonObject)) {
+            let {config} = this.#meta;
+            _mergeConfigs(config, jsonObject);
+        }
 
         return this;
     }
@@ -138,14 +261,18 @@ class PatchingConfigProvider {
     }
 }
 
-
+/**
+ *
+ *   Merge properly, override only common keys.
+ *
+ * */
 function _mergeConfigs(target, source) {
 
     Object.keys(source).forEach(key => {
         let obj = source[key];
 
         if (typeof obj === 'object') {
-            if (target[key] !== undefined && target[key] !== null) {
+            if (_isDefinedNonNull(target[key])) {
                 _mergeConfigs(target[key], obj);
             } else {
                 target[key] = source[key];
@@ -180,7 +307,7 @@ function _pullEnvironmentPrototype(prototype) {
             value = process.env[prototype[key]];
         }
 
-        if (value === undefined) {
+        if (!_isDefinedNonNull(value) || !_isNotEmpty(value)) {
             result = {};
             break;
         }
@@ -189,6 +316,14 @@ function _pullEnvironmentPrototype(prototype) {
     }
 
     return result;
+}
+
+function _isNotEmpty(object) {
+    return Object.keys(object).length > 0;
+}
+
+function _isDefinedNonNull(object) {
+    return (object !== undefined && object !== null);
 }
 
 module.exports = Config

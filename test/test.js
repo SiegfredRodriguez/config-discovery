@@ -14,6 +14,15 @@ const LAYER_ONE_CONFIG_JSON = JSON.parse(fs.readFileSync(LAYER_ONE_CONFIG_JSON_P
 const LAYER_ONE_B_CONFIG_JSON = JSON.parse(fs.readFileSync(LAYER_ONE_B_CONFIG_JSON_PATH));
 const LAYER_ONE_PATCH_JSON = JSON.parse(fs.readFileSync(LAYER_ONE_PATCH_JSON_PATH));
 
+let ENV_KEY_1 = 'ENV_VAL_ONE';
+let ENV_KEY_2 = 'ENV_VAL_TWO';
+let ENV_KEY_3 = 'ENV_VAL_THREE';
+
+let ENV_VALUE_1 = process.env[ENV_KEY_1];
+let ENV_VALUE_2 = process.env[ENV_KEY_2];
+let ENV_VALUE_3 = process.env[ENV_KEY_3];
+
+
 describe(
     'Config', () => {
         describe('fromFile()', () => {
@@ -35,14 +44,95 @@ describe(
                 )
 
             }
-        )
+        );
+        describe('fromObject()', () => {
+                it('should return loaded config when parameter is valid.', () => {
+                        let jsonObject = {field: 'Some value '};
+
+                        let conf = new Config()
+                            .fromObject(jsonObject)
+                            .get();
+
+                        assert.deepStrictEqual(conf, jsonObject);
+                    }
+                );
+                it('should return empty json when parameter is not found or not valid.', () => {
+                        let emptyObject = new Config()
+                            .fromObject({})
+                            .get();
+
+                        let nullObject = new Config()
+                            .fromObject({})
+                            .get();
+
+                        let undefinedObject = new Config()
+                            .fromObject({})
+                            .get();
+
+                        assert.deepStrictEqual(emptyObject, {});
+                        assert.deepStrictEqual(nullObject, {});
+                        assert.deepStrictEqual(undefinedObject, {});
+                    }
+                )
+
+            }
+        );
+        describe('fromEnv()', () => {
+                it('should return loaded config when prototype is satisfied.', () => {
+
+                        let prototype = {
+                            field_one: ENV_KEY_1,
+                            field_two: ENV_KEY_2,
+                            field_three: {
+                                field_three_a: ENV_KEY_3
+                            }
+                        };
+
+                        let expected = {
+                            field_one: ENV_VALUE_1,
+                            field_two: ENV_VALUE_2,
+                            field_three: {
+                                field_three_a: ENV_VALUE_3
+                            }
+                        };
+
+
+                        let conf = new Config()
+                            .fromEnv(prototype)
+                            .get();
+
+                        assert.deepStrictEqual(conf, expected);
+                    }
+                );
+                it('should return empty json when when prototype is not satisfied.', () => {
+
+                        let prototype = {
+                            field_one: ENV_KEY_1,
+                            field_two: 'I_DONT_EXIST',
+                            field_three: {
+                                field_three_a: ENV_KEY_3
+                            }
+                        };
+
+                        let conf = new Config()
+                            .fromEnv(prototype)
+                            .get();
+
+                        assert.deepStrictEqual(conf, {});
+                    }
+                )
+
+            }
+        );
     }
 )
 
 describe(
     'FindFirstConfigProvider', () => {
+        // Will deprecate soon
         describe('or()', () => {
-                it('should return first found configuration', () => {
+                it('should not load if config is already found.', () => {
+
                         let conf = new Config()
                             .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
                             .or(LAYER_ONE_B_CONFIG_JSON_PATH)
@@ -51,11 +141,10 @@ describe(
                         assert.deepStrictEqual(conf, LAYER_ONE_CONFIG_JSON);
                     }
                 );
-                it('should return next config when found, then stop.', () => {
+                it('should load if config is not yet found.', () => {
                         let conf = new Config()
                             .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
                             .or(LAYER_ONE_B_CONFIG_JSON_PATH)
-                            .or(LAYER_ONE_CONFIG_JSON_PATH)
                             .get();
 
                         assert.deepStrictEqual(conf, LAYER_ONE_B_CONFIG_JSON);
@@ -63,7 +152,105 @@ describe(
                 )
 
             }
-        )
+        );
+        describe('orFile()', () => {
+                it('should not load if config is already found.', () => {
+
+                        let conf = new Config()
+                            .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
+                            .orFile(LAYER_ONE_B_CONFIG_JSON_PATH)
+                            .get();
+
+                        assert.deepStrictEqual(conf, LAYER_ONE_CONFIG_JSON);
+                    }
+                );
+                it('should load if config is not yet found.', () => {
+                        let conf = new Config()
+                            .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                            .orFile(LAYER_ONE_B_CONFIG_JSON_PATH)
+                            .get();
+
+                        assert.deepStrictEqual(conf, LAYER_ONE_B_CONFIG_JSON);
+                    }
+                )
+
+            }
+        );
+        describe('orObject()', () => {
+                it('should not load if config is already found.', () => {
+
+                        let object = {data: 'Some data'};
+
+                        let conf = new Config()
+                            .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
+                            .orObject(object)
+                            .get();
+
+                        assert.deepStrictEqual(conf, LAYER_ONE_CONFIG_JSON);
+                    }
+                );
+                it('should load if config is not yet found.', () => {
+                        let object = {data: 'Some data'};
+
+                        let conf = new Config()
+                            .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                            .orObject(object)
+                            .get();
+
+                        assert.deepStrictEqual(conf, object);
+                    }
+                )
+
+            }
+        );
+        describe('orEnv()', () => {
+                it('should not load if config is already found.', () => {
+
+                        let prototype = {
+                            field_one: ENV_KEY_1,
+                            field_two: ENV_KEY_2,
+                            field_three: {
+                                field_three_a: ENV_KEY_3
+                            }
+                        };
+
+                        let conf = new Config()
+                            .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
+                            .orEnv(prototype)
+                            .get();
+
+                        assert.deepStrictEqual(conf, LAYER_ONE_CONFIG_JSON);
+                    }
+                );
+                it('should load if config is not yet found.', () => {
+
+                        let prototype = {
+                            field_one: ENV_KEY_1,
+                            field_two: ENV_KEY_2,
+                            field_three: {
+                                field_three_a: ENV_KEY_3
+                            }
+                        };
+
+                        let expected = {
+                            field_one: ENV_VALUE_1,
+                            field_two: ENV_VALUE_2,
+                            field_three: {
+                                field_three_a: ENV_VALUE_3
+                            }
+                        };
+
+                        let conf = new Config()
+                            .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                            .orEnv(prototype)
+                            .get();
+
+                        assert.deepStrictEqual(conf, expected);
+                    }
+                )
+
+            }
+        );
     }
 )
 
@@ -95,46 +282,294 @@ describe('PatchingConfigProvider', () => {
                 )
             }
         );
-
         describe('patchWithEnv()', () => {
-                it('should patch previous result with new values from patch', () => {
+                it('should not patch if prototype is null, undefined, or empty', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .patchWithEnv(null)
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+
+                        config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .patchWithEnv(undefined)
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+
+                        config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .patchWithEnv({})
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+
+                    }
+                );
+                it('should not patch if prototype is unsatisfied.', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
 
                         let prototype = {
-                            simple_keyone: 'ENV_VAL_ONE',
-                            simple_keytwo: 'ENV_VAL_TWO',
-                            nested_valuethree: {
-                                simple_valuethree_a: 'ENV_VAL_THREE'
-                            }
+                            data_one: ENV_KEY_1,
+                            data_three: 'I_DONT_EXIST'
                         };
 
-                        let conf = new Config()
-                            .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
+                        let config = new Config()
+                            .fromObject(baseConfig)
                             .thenPatchWith()
                             .patchWithEnv(prototype)
                             .get();
 
-                        let EV_1 = 'value one from env.';
-                        let EV_2 = 'value two from env.';
-                        let EV_3 = 'value three from env.';
-
-                        assert.deepStrictEqual(conf['simple_keyone'], EV_1);
-                        assert.deepStrictEqual(conf['simple_keytwo'], EV_2);
-
-                        // Sanity check for nested JSON
-                        assert.deepStrictEqual(conf['nested_valuethree']['simple_valuethree_a'], EV_3);
+                        assert.deepStrictEqual(config, baseConfig);
                     }
                 );
-                it('should ignore when prototype cannot be satisfied', () => {
-                        let conf = new Config()
-                            .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
+                it('should patch both existing and new keys', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let prototype = {
+                            data_one: ENV_KEY_1,
+                            data_three: ENV_KEY_2
+                        };
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
                             .thenPatchWith()
-                            .patchWithEnv({simple_keyone: 'IDONT_EXIST_DUDE'})
+                            .patchWithEnv(prototype)
                             .get();
 
-                        assert.deepStrictEqual(conf, LAYER_ONE_CONFIG_JSON);
+                        assert.deepStrictEqual(config.data_one, ENV_VALUE_1);
+                        assert.deepStrictEqual(config.data_two, baseConfig.data_two);
+                        assert.deepStrictEqual(config.data_three, ENV_VALUE_2);
                     }
-                )
+                );
+                it('should patch only specific key in nested  objects', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let prototype = {
+                            nested: {
+                                nested_two: ENV_KEY_2
+                            }
+                        };
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .patchWithEnv(prototype)
+                            .get();
+
+                        assert.deepStrictEqual(config.nested.nested_one, baseConfig.nested.nested_one);
+                        assert.deepStrictEqual(config.nested.nested_two, ENV_VALUE_2);
+                    }
+                );
             }
-        )
+        );
+        describe('env()', () => {
+                it('should not patch if prototype is null, undefined, or empty', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .env(null)
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+
+                        config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .env(undefined)
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+
+                        config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .env({})
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+
+                    }
+                );
+                it('should not patch if prototype is unsatisfied.', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let prototype = {
+                            data_one: ENV_KEY_1,
+                            data_three: 'I_DONT_EXIST'
+                        };
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .env(prototype)
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+                    }
+                );
+                it('should patch both existing and new keys', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let prototype = {
+                            data_one: ENV_KEY_1,
+                            data_three: ENV_KEY_2
+                        };
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .env(prototype)
+                            .get();
+
+                        assert.deepStrictEqual(config.data_one, ENV_VALUE_1);
+                        assert.deepStrictEqual(config.data_two, baseConfig.data_two);
+                        assert.deepStrictEqual(config.data_three, ENV_VALUE_2);
+                    }
+                );
+                it('should patch only specific key in nested  objects', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let prototype = {
+                            nested: {
+                                nested_two: ENV_KEY_2
+                            }
+                        };
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .env(prototype)
+                            .get();
+
+                        assert.deepStrictEqual(config.nested.nested_one, baseConfig.nested.nested_one);
+                        assert.deepStrictEqual(config.nested.nested_two, ENV_VALUE_2);
+                    }
+                );
+            }
+        );
+        describe('object()', () => {
+                it('should not patch if object is null, undefined, or empty', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .object(null)
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+
+                        config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .object(undefined)
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+
+                        config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .object({})
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+
+                    }
+                );
+                it('should patch both existing and new keys', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let patch = {
+                            data_two: 75,
+                            data_three: 'non-existing data'
+                        };
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .object(patch)
+                            .get();
+
+                        assert.deepStrictEqual(config.data_one, baseConfig.data_one);
+                        assert.deepStrictEqual(config.data_two, patch.data_two);
+                        assert.deepStrictEqual(config.data_three, patch.data_three);
+                    }
+                );
+                it('should patch only specific key in nested  objects', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let patch = {
+                            nested: {
+                                nested_one: 'Patch value'
+                            }
+                        };
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .object(patch)
+                            .get();
+
+                        assert.deepStrictEqual(config.data_one, baseConfig.data_one);
+                        assert.deepStrictEqual(config.nested.nested_two, baseConfig.nested.nested_two);
+                        assert.deepStrictEqual(config.nested.nested_one, patch.nested.nested_one);
+                    }
+                );
+            }
+        );
     }
 )
