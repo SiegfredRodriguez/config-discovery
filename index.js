@@ -73,8 +73,8 @@ class FindFirstConfigProvider {
     }
 
     /**
-     * Will try to load configuration from absolutePath if the previous
-     * attempts from from*() or another or*() failed.
+     * @deprecated
+     * Replaced with orFile(absolutePath) for interface consistency.
      * @param absolutePath Possible location of a configuration file
      * @returns FindFirstConfigProvider
      */
@@ -204,23 +204,54 @@ class PatchingConfigProvider {
     }
 
     /**
-     * Will try to *assemble* a config based from provided prototype object,
-     * and override any existing config key, and append non existing ones.
-     *
-     *  Currently only support string valued ENV_VARS (no structure data value support yet).
-     *
-     *  PROTOTYPE format:
-     *  {
-     *      jsonKey1 : ENVIRONMENT_VARIABLE_NAME_1,
-     *      jsonKey2: ENV
-     *  }
+     * @deprecated
+     * Replaced with env(prototype) for interface consistency.
      *
      * @param prototype Prototype of expected object from the environment.
      * @returns PatchingConfigProvider
      */
     patchWithEnv(prototype) {
-        let envObject = _pullEnvironmentPrototype(prototype);
-        _mergeConfigs(this.#meta.config, envObject);
+
+        if (_isDefinedNonNull(prototype) && _isNotEmpty(prototype)) {
+            let envObject = _pullEnvironmentPrototype(prototype);
+            _mergeConfigs(this.#meta.config, envObject);
+        }
+        return this;
+    }
+
+
+    /**
+     *
+     *  Will try to patch current config with JSON object generated
+     *  from environment prototype.
+     *
+     * @param prototype
+     * @returns PatchingConfigProvider
+     */
+    env(prototype) {
+
+        if (_isDefinedNonNull(prototype) && _isNotEmpty(prototype)) {
+            let envObject = _pullEnvironmentPrototype(prototype);
+            this.object(envObject);
+        }
+
+        return this;
+    }
+
+    /**
+     *
+     *  Will try to patch current config with JSON object if
+     *  its is defined and not empty.
+     *
+     * @param jsonObject
+     * @returns PatchingConfigProvider
+     */
+    object(jsonObject) {
+
+        if (_isDefinedNonNull(jsonObject) && _isNotEmpty(jsonObject)) {
+            let {config} = this.#meta;
+            _mergeConfigs(config, jsonObject);
+        }
 
         return this;
     }

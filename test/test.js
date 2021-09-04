@@ -282,41 +282,293 @@ describe('PatchingConfigProvider', () => {
                 )
             }
         );
-
         describe('patchWithEnv()', () => {
-                it('should patch previous result with new values from patch', () => {
+                it('should not patch if prototype is null, undefined, or empty', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .patchWithEnv(null)
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+
+                        config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .patchWithEnv(undefined)
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+
+                        config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .patchWithEnv({})
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+
+                    }
+                );
+                it('should not patch if prototype is unsatisfied.', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
 
                         let prototype = {
-                            simple_keyone: ENV_KEY_1,
-                            simple_keytwo: ENV_KEY_2,
-                            nested_valuethree: {
-                                simple_valuethree_a: ENV_KEY_3
-                            }
+                            data_one: ENV_KEY_1,
+                            data_three: 'I_DONT_EXIST'
                         };
 
-                        let conf = new Config()
-                            .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
+                        let config = new Config()
+                            .fromObject(baseConfig)
                             .thenPatchWith()
                             .patchWithEnv(prototype)
                             .get();
 
-                        assert.deepStrictEqual(conf['simple_keyone'], ENV_VALUE_1);
-                        assert.deepStrictEqual(conf['simple_keytwo'], ENV_VALUE_2);
-
-                        // Sanity check for nested JSON
-                        assert.deepStrictEqual(conf['nested_valuethree']['simple_valuethree_a'], ENV_VALUE_3);
+                        assert.deepStrictEqual(config, baseConfig);
                     }
                 );
-                it('should ignore when prototype cannot be satisfied', () => {
-                        let conf = new Config()
-                            .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
+                it('should patch both existing and new keys', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let prototype = {
+                            data_one: ENV_KEY_1,
+                            data_three: ENV_KEY_2
+                        };
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
                             .thenPatchWith()
-                            .patchWithEnv({simple_keyone: 'IDONT_EXIST_DUDE'})
+                            .patchWithEnv(prototype)
                             .get();
 
-                        assert.deepStrictEqual(conf, LAYER_ONE_CONFIG_JSON);
+                        assert.deepStrictEqual(config.data_one, ENV_VALUE_1);
+                        assert.deepStrictEqual(config.data_two, baseConfig.data_two);
+                        assert.deepStrictEqual(config.data_three, ENV_VALUE_2);
                     }
-                )
+                );
+                it('should patch only specific key in nested  objects', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let prototype = {
+                            nested: {
+                                nested_two: ENV_KEY_2
+                            }
+                        };
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .patchWithEnv(prototype)
+                            .get();
+
+                        assert.deepStrictEqual(config.nested.nested_one, baseConfig.nested.nested_one);
+                        assert.deepStrictEqual(config.nested.nested_two, ENV_VALUE_2);
+                    }
+                );
+            }
+        );
+        describe('env()', () => {
+                it('should not patch if prototype is null, undefined, or empty', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .env(null)
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+
+                        config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .env(undefined)
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+
+                        config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .env({})
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+
+                    }
+                );
+                it('should not patch if prototype is unsatisfied.', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let prototype = {
+                            data_one: ENV_KEY_1,
+                            data_three: 'I_DONT_EXIST'
+                        };
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .env(prototype)
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+                    }
+                );
+                it('should patch both existing and new keys', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let prototype = {
+                            data_one: ENV_KEY_1,
+                            data_three: ENV_KEY_2
+                        };
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .env(prototype)
+                            .get();
+
+                        assert.deepStrictEqual(config.data_one, ENV_VALUE_1);
+                        assert.deepStrictEqual(config.data_two, baseConfig.data_two);
+                        assert.deepStrictEqual(config.data_three, ENV_VALUE_2);
+                    }
+                );
+                it('should patch only specific key in nested  objects', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let prototype = {
+                            nested: {
+                                nested_two: ENV_KEY_2
+                            }
+                        };
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .env(prototype)
+                            .get();
+
+                        assert.deepStrictEqual(config.nested.nested_one, baseConfig.nested.nested_one);
+                        assert.deepStrictEqual(config.nested.nested_two, ENV_VALUE_2);
+                    }
+                );
+            }
+        );
+        describe('object()', () => {
+                it('should not patch if object is null, undefined, or empty', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .object(null)
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+
+                        config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .object(undefined)
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+
+                        config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .object({})
+                            .get();
+
+                        assert.deepStrictEqual(config, baseConfig);
+
+                    }
+                );
+                it('should patch both existing and new keys', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let patch = {
+                            data_two: 75,
+                            data_three: 'non-existing data'
+                        };
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .object(patch)
+                            .get();
+
+                        assert.deepStrictEqual(config.data_one, baseConfig.data_one);
+                        assert.deepStrictEqual(config.data_two, patch.data_two);
+                        assert.deepStrictEqual(config.data_three, patch.data_three);
+                    }
+                );
+                it('should patch only specific key in nested  objects', () => {
+                        let baseConfig = {
+                            data_one: 'Some value one',
+                            data_two: 2,
+                            nested: {nested_one: 'Nested value one', nested_two: 'n2'}
+                        }
+
+                        let patch = {
+                            nested: {
+                                nested_one: 'Patch value'
+                            }
+                        };
+
+                        let config = new Config()
+                            .fromObject(baseConfig)
+                            .thenPatchWith()
+                            .object(patch)
+                            .get();
+
+                        assert.deepStrictEqual(config.data_one, baseConfig.data_one);
+                        assert.deepStrictEqual(config.nested.nested_two, baseConfig.nested.nested_two);
+                        assert.deepStrictEqual(config.nested.nested_one, patch.nested.nested_one);
+                    }
+                );
             }
         );
     }
