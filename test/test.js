@@ -2,15 +2,22 @@ const Config = require("../index");
 const assert = require("assert");
 const fs = require('fs');
 const path = require('path');
+const Yaml = require('yaml');
+const Prop = require('properties');
 
 const LAYER_ONE_CONFIG_JSON_PATH = path.resolve(__dirname, './layer-one/config.json');
+const LAYER_ONE_CONFIG_PROPERTIES_PATH = path.resolve(__dirname, './layer-one/config.properties');
+const LAYER_ONE_CONFIG_YAML_PATH = path.resolve(__dirname, './layer-one/config.yaml');
+const LAYER_ONE_CONFIG_YML_PATH = path.resolve(__dirname, './layer-one/config.yml');
 const LAYER_ONE_PATCH_JSON_PATH = path.resolve(__dirname, './layer-one/patch.json');
 const LAYER_ONE_B_CONFIG_JSON_PATH = path.resolve(__dirname, './layer-one-b/config.json');
 // Does not exist;
 const LAYER_TWO_CONFIG_JSON_PATH = path.resolve(__dirname, './layer-two/config.json');
 
-
 const LAYER_ONE_CONFIG_JSON = JSON.parse(fs.readFileSync(LAYER_ONE_CONFIG_JSON_PATH));
+const LAYER_ONE_CONFIG_PROPERTIES = Prop.parse(fs.readFileSync(LAYER_ONE_CONFIG_PROPERTIES_PATH).toString(), {namespaces: true});
+const LAYER_ONE_CONFIG_YAML = Yaml.parse(fs.readFileSync(LAYER_ONE_CONFIG_YAML_PATH).toString());
+const LAYER_ONE_CONFIG_YML = Yaml.parse(fs.readFileSync(LAYER_ONE_CONFIG_YML_PATH).toString());
 const LAYER_ONE_B_CONFIG_JSON = JSON.parse(fs.readFileSync(LAYER_ONE_B_CONFIG_JSON_PATH));
 const LAYER_ONE_PATCH_JSON = JSON.parse(fs.readFileSync(LAYER_ONE_PATCH_JSON_PATH));
 
@@ -26,7 +33,7 @@ let ENV_VALUE_3 = process.env[ENV_KEY_3];
 describe(
     'Config', () => {
         describe('fromFile()', () => {
-                it('should return loaded config when parameter is valid.', () => {
+                it('should return loaded config when JSON parameter is valid.', () => {
                         let conf = new Config()
                             .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
                             .get();
@@ -41,7 +48,31 @@ describe(
 
                         assert.deepStrictEqual(conf, {});
                     }
-                )
+                );
+                it('Should accept both YAML/YML', () => {
+                        let config = new Config()
+                            .fromFile(LAYER_ONE_CONFIG_YAML_PATH)
+                            .get();
+
+                        assert.deepStrictEqual(config, LAYER_ONE_CONFIG_YAML);
+
+                        config = new Config()
+                            .fromFile(LAYER_ONE_CONFIG_YML_PATH)
+                            .get();
+
+                        assert.deepStrictEqual(config, LAYER_ONE_CONFIG_YML);
+                    }
+                );
+                it('Should use custom parser when provided', () => {
+
+                        let config = new Config()
+                            .fromFile(LAYER_ONE_CONFIG_PROPERTIES_PATH, {customParser: str => Prop.parse(str, {namespaces: true})})
+                            .get();
+
+                        assert(config, LAYER_ONE_CONFIG_PROPERTIES);
+
+                    }
+                );
 
             }
         );

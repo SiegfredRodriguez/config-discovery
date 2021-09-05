@@ -1,4 +1,5 @@
 let fs = require('fs');
+const path = require("path");
 
 class Config {
     #meta;
@@ -7,20 +8,25 @@ class Config {
         this.#meta = {config: {}, parser: options.parser};
     }
 
+
     /**
      * Will try to load initial config from provided
      * absolutePath. If config file is not found, it does nothing.
      *
      * @param absolutePath Possible location of a configuration file
+     * @param {function(string)=>JSON} options.customParser Custom parser for the config file, must accept fs.readFileSync().toString() and return JSON Object.
+     * @param options parsing options, used JSON to future proof.
      * @returns FindFirstConfigProvider
      */
-    fromFile(absolutePath) {
-        const {parser} = this.#meta;
+    fromFile(absolutePath, options = {customParser: null}) {
         let object = {};
 
         if (fs.existsSync(absolutePath)) {
             let byteData = fs.readFileSync(absolutePath);
-            object = parser(byteData);
+
+            let parser = _isDefinedNonNull(options.customParser) ? options.customParser : _getParser(absolutePath);
+
+            object = parser(byteData.toString());
         }
 
         return this.fromObject(object);
@@ -325,5 +331,35 @@ function _isNotEmpty(object) {
 function _isDefinedNonNull(object) {
     return (object !== undefined && object !== null);
 }
+
+function _getParser(filePath) {
+    let extension = path.extname(filePath);
+
+    if (extension.length === 0) {
+        throw Error(`Can't file extension of ${filePath}`);
+    }
+
+    extension = extension.slice(1, extension.length);
+    let parser = KNOWN_FILE_PARSER[extension];
+
+    if (!_isDefinedNonNull(parser)) {
+        throw Error(`config-json auto parse only supports JSON and YAML files, you can pass your own parser via options:{ customParser: (stringValue) => JSONObject }`)
+    }
+
+    return parser;
+}
+
+const yamlParser = (dataString) => {
+    return require('yaml').parse(dataString);
+}
+const jsonParser = (dataString) => {
+    return JSON.parse(dataString);
+}
+
+const KNOWN_FILE_PARSER = {
+    yaml: yamlParser,
+    yml: yamlParser,
+    json: jsonParser
+};
 
 module.exports = Config
