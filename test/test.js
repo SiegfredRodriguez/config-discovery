@@ -4,9 +4,12 @@ const fs = require('fs');
 const path = require('path');
 const Yaml = require('yaml');
 const Prop = require('properties');
+const {UnknownFileFormatError, ParseFailureError} = require("../errors");
 
 const LAYER_ONE_CONFIG_JSON_PATH = path.resolve(__dirname, './layer-one/config.json');
+const LAYER_ONE_CONFIG_EXTENSIONLESS_PATH = path.resolve(__dirname, './layer-one/config');
 const LAYER_ONE_CONFIG_PROPERTIES_PATH = path.resolve(__dirname, './layer-one/config.properties');
+const LAYER_ONE_CONFIG_XML_PATH = path.resolve(__dirname, './layer-one/config.xml');
 const LAYER_ONE_CONFIG_YAML_PATH = path.resolve(__dirname, './layer-one/config.yaml');
 const LAYER_ONE_CONFIG_YML_PATH = path.resolve(__dirname, './layer-one/config.yml');
 const LAYER_ONE_PATCH_JSON_PATH = path.resolve(__dirname, './layer-one/patch.json');
@@ -28,7 +31,6 @@ let ENV_KEY_3 = 'ENV_VAL_THREE';
 let ENV_VALUE_1 = process.env[ENV_KEY_1];
 let ENV_VALUE_2 = process.env[ENV_KEY_2];
 let ENV_VALUE_3 = process.env[ENV_KEY_3];
-
 
 describe(
     'Config', () => {
@@ -73,7 +75,40 @@ describe(
 
                     }
                 );
+                it('Should throw UnknownFileFormatError when file has no extension.', () => {
 
+                        assert.throws(() => {
+                                new Config()
+                                    .fromFile(LAYER_ONE_CONFIG_EXTENSIONLESS_PATH)
+                                    .get();
+                            },
+                            e => (e instanceof UnknownFileFormatError)
+                        );
+
+                    }
+                );
+                it('Should throw UnknownFileFormatError when file type is unknown, and no parser is provided.', () => {
+                        assert.throws(() => {
+                                new Config()
+                                    .fromFile(LAYER_ONE_CONFIG_XML_PATH)
+                                    .get();
+                            },
+                            e => (e instanceof UnknownFileFormatError)
+                        );
+
+                    }
+                );
+                it('Should throw ParseFailureError when parsing fails.', () => {
+                        assert.throws(() => {
+                                new Config()
+                                    .fromFile(LAYER_ONE_CONFIG_XML_PATH, { customParser: (raw) => { throw Error('some parsing failure.'); }})
+                                    .get();
+                            },
+                            e => (e instanceof ParseFailureError)
+                        );
+
+                    }
+                );
             }
         );
         describe('fromObject()', () => {

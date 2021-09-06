@@ -1,5 +1,6 @@
 let fs = require('fs');
 const path = require("path");
+const {UnknownFileFormatError, ParseFailureError} = require("./errors");
 
 class Config {
     #meta;
@@ -26,7 +27,11 @@ class Config {
 
             let parser = _isDefinedNonNull(options.customParser) ? options.customParser : _getParser(absolutePath);
 
-            object = parser(byteData.toString());
+            try {
+                object = parser(byteData.toString());
+            } catch (e) {
+                throw new ParseFailureError(e.toString());
+            }
         }
 
         return this.fromObject(object);
@@ -336,14 +341,14 @@ function _getParser(filePath) {
     let extension = path.extname(filePath);
 
     if (extension.length === 0) {
-        throw Error(`Can't file extension of ${filePath}`);
+        throw new UnknownFileFormatError(`Can't find file extensions of ${filePath}, try passing custom parser`);
     }
 
     extension = extension.slice(1, extension.length);
     let parser = KNOWN_FILE_PARSER[extension];
 
     if (!_isDefinedNonNull(parser)) {
-        throw Error(`config-json auto parse only supports JSON and YAML files, you can pass your own parser via options:{ customParser: (stringValue) => JSONObject }`)
+        throw new UnknownFileFormatError(`Config-discovery auto parse only supports JSON and YAML/YML files, you can pass your own parser via options:{ customParser: (stringValue) => JSONObject }.`)
     }
 
     return parser;
@@ -361,5 +366,7 @@ const KNOWN_FILE_PARSER = {
     yml: yamlParser,
     json: jsonParser
 };
+
+
 
 module.exports = Config
