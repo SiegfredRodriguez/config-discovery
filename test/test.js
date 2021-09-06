@@ -101,7 +101,11 @@ describe(
                 it('Should throw ParseFailureError when parsing fails.', () => {
                         assert.throws(() => {
                                 new Config()
-                                    .fromFile(LAYER_ONE_CONFIG_XML_PATH, { customParser: (raw) => { throw Error('some parsing failure.'); }})
+                                    .fromFile(LAYER_ONE_CONFIG_XML_PATH, {
+                                        customParser: () => {
+                                            throw Error('some parsing failure.');
+                                        }
+                                    })
                                     .get();
                             },
                             e => (e instanceof ParseFailureError)
@@ -139,7 +143,7 @@ describe(
                         assert.deepStrictEqual(nullObject, {});
                         assert.deepStrictEqual(undefinedObject, {});
                     }
-                )
+                );
 
             }
         );
@@ -195,7 +199,7 @@ describe(
 
 describe(
     'FindFirstConfigProvider', () => {
-        // Will deprecate soon
+        // Will deprecate soon, an alias for orFile() no need for advanced testing.
         describe('or()', () => {
                 it('should not load if config is already found.', () => {
 
@@ -238,8 +242,75 @@ describe(
 
                         assert.deepStrictEqual(conf, LAYER_ONE_B_CONFIG_JSON);
                     }
-                )
+                );
+                it('Should accept both YAML/YML', () => {
+                        let config = new Config()
+                            .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                            .orFile(LAYER_ONE_CONFIG_YAML_PATH)
+                            .get();
 
+                        assert.deepStrictEqual(config, LAYER_ONE_CONFIG_YAML);
+
+                        config = new Config()
+                            .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                            .orFile(LAYER_ONE_CONFIG_YML_PATH)
+                            .get();
+
+                        assert.deepStrictEqual(config, LAYER_ONE_CONFIG_YML);
+                    }
+                );
+                it('Should use custom parser when provided', () => {
+
+                        let config = new Config()
+                            .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                            .orFile(LAYER_ONE_CONFIG_PROPERTIES_PATH, {customParser: str => Prop.parse(str, {namespaces: true})})
+                            .get();
+
+                        assert(config, LAYER_ONE_CONFIG_PROPERTIES);
+
+                    }
+                );
+                it('Should throw UnknownFileFormatError when file has no extension.', () => {
+
+                        assert.throws(() => {
+                                new Config()
+                                    .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                                    .orFile(LAYER_ONE_CONFIG_EXTENSIONLESS_PATH)
+                                    .get();
+                            },
+                            e => (e instanceof UnknownFileFormatError)
+                        );
+
+                    }
+                );
+                it('Should throw UnknownFileFormatError when file type is unknown, and no parser is provided.', () => {
+                        assert.throws(() => {
+                                new Config()
+                                    .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                                    .orFile(LAYER_ONE_CONFIG_XML_PATH)
+                                    .get();
+                            },
+                            e => (e instanceof UnknownFileFormatError)
+                        );
+
+                    }
+                );
+                it('Should throw ParseFailureError when parsing fails.', () => {
+                        assert.throws(() => {
+                                new Config()
+                                    .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                                    .orFile(LAYER_ONE_CONFIG_XML_PATH, {
+                                        customParser: () => {
+                                            throw Error('some parsing failure.');
+                                        }
+                                    })
+                                    .get();
+                            },
+                            e => (e instanceof ParseFailureError)
+                        );
+
+                    }
+                );
             }
         );
         describe('orObject()', () => {

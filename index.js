@@ -110,20 +110,28 @@ class FindFirstConfigProvider {
      * Will try to load configuration from absolutePath if the previous
      * attempts from from*() or another or*() failed.
      * @param absolutePath Possible location of a configuration file
+     * @param {function(string)=>JSON} options.customParser Custom parser for the config file, must accept fs.readFileSync().toString() and return JSON Object.
+     * @param options parsing options, used JSON to future proof.
      * @returns FindFirstConfigProvider
      */
-    orFile(absolutePath) {
-        const {parser, foundFirst} = this.#meta;
+    orFile(absolutePath, options = {customParser: null}) {
+        const {foundFirst} = this.#meta;
+        let object = {};
 
         if (!foundFirst) {
             if (fs.existsSync(absolutePath)) {
                 let byteData = fs.readFileSync(absolutePath);
-                let object = parser(byteData);
-                this.orObject(object);
+                let parser = _isDefinedNonNull(options.customParser) ? options.customParser : _getParser(absolutePath);
+
+                try {
+                    object = parser(byteData.toString());
+                } catch (e) {
+                    throw new ParseFailureError(e.toString());
+                }
             }
         }
 
-        return this;
+        return this.orObject(object);
     }
 
     /**
