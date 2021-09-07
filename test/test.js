@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const Yaml = require('yaml');
 const Prop = require('properties');
-const {UnknownFileFormatError, ParseFailureError} = require("../errors");
+const {UnknownFileFormatError, ParseFailureError, NoConfigFoundError} = require("../errors");
 
 const LAYER_ONE_CONFIG_JSON_PATH = path.resolve(__dirname, './layer-one/config.json');
 const LAYER_ONE_CONFIG_EXTENSIONLESS_PATH = path.resolve(__dirname, './layer-one/config');
@@ -391,6 +391,29 @@ describe(
                         assert.deepStrictEqual(conf, expected);
                     }
                 )
+
+            }
+        );
+        describe('thenPatchWith()', () => {
+                it('should not throw if config is found.', function () {
+                        assert.doesNotThrow(() => {
+                                new Config()
+                                    .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
+                                    .thenPatchWith();
+                            }
+                        )
+                    }
+                );
+                it('should throw if config is not found.', function () {
+                        assert.throws(() => {
+                                new Config()
+                                    .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                                    .thenPatchWith();
+                            },
+                            e => (e instanceof NoConfigFoundError)
+                        )
+                    }
+                );
 
             }
         );
