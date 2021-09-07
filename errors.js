@@ -8,4 +8,9 @@ function UnknownFileFormatError(message = 'cannot natively parse file format, pl
     return this;
 }
 
-module.exports = { ParseFailureError, UnknownFileFormatError };
+function NoConfigFoundError(message = 'no config found in the chain') {
+    this.message = `NoConfigFoundError ${message}`;
+    return this;
+}
+
+module.exports = { ParseFailureError, UnknownFileFormatError, NoConfigFoundError };

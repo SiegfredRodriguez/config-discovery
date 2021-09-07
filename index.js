@@ -1,6 +1,6 @@
 let fs = require('fs');
 const path = require("path");
-const {UnknownFileFormatError, ParseFailureError} = require("./errors");
+const {UnknownFileFormatError, ParseFailureError, NoConfigFoundError} = require("./errors");
 
 class Config {
     #meta;
@@ -180,6 +180,11 @@ class FindFirstConfigProvider {
      * @returns PatchingConfigProvider
      */
     thenPatchWith() {
+
+        if (!this.#meta.foundFirst) {
+            throw new NoConfigFoundError(`No config found, cannot continue with patching.`);
+        }
+
         let metadata = this.#meta;
         this.#meta = undefined;
         return new PatchingConfigProvider(metadata);
@@ -205,18 +210,24 @@ class PatchingConfigProvider {
      * Will try to load specified config file,
      * and override any existing config key, and append non existing ones.
      * @param absolutePath Possible location of a configuration file
+     * @param {function(string)=>JSON} options.customParser Custom parser for the config file, must accept fs.readFileSync().toString() and return JSON Object.
+     * @param options parsing options, used JSON to future proof.
      * @returns PatchingConfigProvider
      */
-    configFile(absolutePath) {
-        const {config, parser} = this.#meta;
-
+    configFile(absolutePath, options = {customParser: null}) {
         if (fs.existsSync(absolutePath)) {
             let byteData = fs.readFileSync(absolutePath);
-            let object = parser(byteData);
+            let parser = _isDefinedNonNull(options.customParser) ? options.customParser : _getParser(absolutePath);
 
-            _mergeConfigs(config, object);
+            let object = {};
 
-            this.#meta.foundFirst = true;
+            try {
+                object = parser(byteData.toString());
+            } catch (e) {
+                throw new ParseFailureError(e.toString());
+            }
+
+            this.object(object);
         }
 
         return this;
@@ -374,7 +385,5 @@ const KNOWN_FILE_PARSER = {
     yml: yamlParser,
     json: jsonParser
 };
-
-
 
 module.exports = Config
