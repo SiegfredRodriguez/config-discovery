@@ -20,20 +20,7 @@ class Config {
      * @returns FindFirstConfigProvider
      */
     fromFile(absolutePath, options = {customParser: null}) {
-        let object = {};
-
-        if (fs.existsSync(absolutePath)) {
-            let byteData = fs.readFileSync(absolutePath);
-
-            let parser = _isDefinedNonNull(options.customParser) ? options.customParser : _getParser(absolutePath);
-
-            try {
-                object = parser(byteData.toString());
-            } catch (e) {
-                throw new ParseFailureError(e.toString());
-            }
-        }
-
+        let object = _loadFile(absolutePath, options);
         return this.fromObject(object);
     }
 
@@ -87,23 +74,12 @@ class FindFirstConfigProvider {
      * @deprecated
      * Replaced with orFile(absolutePath) for interface consistency.
      * @param absolutePath Possible location of a configuration file
+     * @param {function(string)=>JSON} options.customParser Custom parser for the config file, must accept fs.readFileSync().toString() and return JSON Object.
+     * @param options parsing options, used JSON to future proof.
      * @returns FindFirstConfigProvider
      */
-    or(absolutePath) {
-        const {config, parser, foundFirst} = this.#meta;
-
-        if (!foundFirst) {
-            if (fs.existsSync(absolutePath)) {
-                let byteData = fs.readFileSync(absolutePath);
-                let object = parser(byteData);
-
-                _mergeConfigs(config, object);
-
-                this.#meta.foundFirst = true;
-            }
-        }
-
-        return this;
+    or(absolutePath, options = {customParser: null}) {
+        return this.orFile(absolutePath, options);
     }
 
     /**
@@ -119,16 +95,7 @@ class FindFirstConfigProvider {
         let object = {};
 
         if (!foundFirst) {
-            if (fs.existsSync(absolutePath)) {
-                let byteData = fs.readFileSync(absolutePath);
-                let parser = _isDefinedNonNull(options.customParser) ? options.customParser : _getParser(absolutePath);
-
-                try {
-                    object = parser(byteData.toString());
-                } catch (e) {
-                    throw new ParseFailureError(e.toString());
-                }
-            }
+            object = _loadFile(absolutePath, options);
         }
 
         return this.orObject(object);
@@ -215,22 +182,8 @@ class PatchingConfigProvider {
      * @returns PatchingConfigProvider
      */
     configFile(absolutePath, options = {customParser: null}) {
-        if (fs.existsSync(absolutePath)) {
-            let byteData = fs.readFileSync(absolutePath);
-            let parser = _isDefinedNonNull(options.customParser) ? options.customParser : _getParser(absolutePath);
-
-            let object = {};
-
-            try {
-                object = parser(byteData.toString());
-            } catch (e) {
-                throw new ParseFailureError(e.toString());
-            }
-
-            this.object(object);
-        }
-
-        return this;
+        let object = _loadFile(absolutePath, options);
+        return this.object(object);
     }
 
     /**
@@ -241,14 +194,8 @@ class PatchingConfigProvider {
      * @returns PatchingConfigProvider
      */
     patchWithEnv(prototype) {
-
-        if (_isDefinedNonNull(prototype) && _isNotEmpty(prototype)) {
-            let envObject = _pullEnvironmentPrototype(prototype);
-            _mergeConfigs(this.#meta.config, envObject);
-        }
-        return this;
+        return this.env(prototype);
     }
-
 
     /**
      *
@@ -371,6 +318,30 @@ function _getParser(filePath) {
     }
 
     return parser;
+}
+
+/**
+ *
+ *   if file does not exist, will return empty object,
+ *   other abnormalities will throw known errors.
+ *
+ * */
+function _loadFile(absolutePath, options = {customParser: null}) {
+
+    let object = {};
+
+    if (fs.existsSync(absolutePath)) {
+        let byteData = fs.readFileSync(absolutePath);
+        let parser = _isDefinedNonNull(options.customParser) ? options.customParser : _getParser(absolutePath);
+
+        try {
+            object = parser(byteData.toString());
+        } catch (e) {
+            throw new ParseFailureError(e.toString());
+        }
+    }
+
+    return object;
 }
 
 const yamlParser = (dataString) => {
