@@ -227,8 +227,16 @@ class PatchingConfigProvider {
      * @returns PatchingConfigProvider
      */
     configFile(absolutePath, options = {customParser: null}) {
+        let {logger} = this.#meta;
+
         let object = _loadFile(absolutePath, options);
-        return this.object(object);
+        let self = this.object(object);
+
+        if (_isNotEmpty(object)) {
+            _tryLog(`Patched with file ${absolutePath}`, logger);
+        }
+
+        return self;
     }
 
     /**
@@ -251,10 +259,14 @@ class PatchingConfigProvider {
      * @returns PatchingConfigProvider
      */
     env(prototype) {
-
+        let {logger} = this.#meta;
         if (_isDefinedNonNull(prototype) && _isNotEmpty(prototype)) {
             let envObject = _pullEnvironmentPrototype(prototype);
             this.object(envObject);
+
+            if (_isNotEmpty(envObject)) {
+                _tryLog(`Patched with env prototype ${JSON.stringify(prototype)}`, logger);
+            }
         }
 
         return this;
@@ -273,12 +285,14 @@ class PatchingConfigProvider {
         if (_isDefinedNonNull(jsonObject) && _isNotEmpty(jsonObject)) {
             let {config} = this.#meta;
             _mergeConfigs(config, jsonObject);
+            _tryLog(`Applied config object patch`);
         }
 
         return this;
     }
 
     get() {
+        _tryLog(`WARNING: No patches were found and non were applied.`);
         return this.#meta.config;
     }
 }
