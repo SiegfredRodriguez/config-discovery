@@ -1,6 +1,6 @@
 {
   "name": "config-discovery",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "A simple JSON configuration loading and compositing utility.",
   "main": "index.js",
   "scripts": {
@@ -11,9 +11,12 @@
     "mocha": "^9.1.1",
     "c8": "^7.8.0",
     "codecov": "^3.8.3",
-    "dotenv": "^10.0.0"
+    "dotenv": "^10.0.0",
+    "properties": "^1.2.1"
   },
-  "dependencies": {},
+  "dependencies": {
+    "yaml": "^1.10.2"
+  },
   "keywords": [
     "config",
     "configmap",

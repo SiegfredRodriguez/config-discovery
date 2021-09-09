@@ -2,17 +2,33 @@ const Config = require("../index");
 const assert = require("assert");
 const fs = require('fs');
 const path = require('path');
+const Yaml = require('yaml');
+const Prop = require('properties');
+const {UnknownFileFormatError, ParseFailureError, NoConfigFoundError} = require("../errors");
 
 const LAYER_ONE_CONFIG_JSON_PATH = path.resolve(__dirname, './layer-one/config.json');
+const LAYER_ONE_CONFIG_EXTENSIONLESS_PATH = path.resolve(__dirname, './layer-one/config');
+const LAYER_ONE_CONFIG_PROPERTIES_PATH = path.resolve(__dirname, './layer-one/config.properties');
+const LAYER_ONE_CONFIG_XML_PATH = path.resolve(__dirname, './layer-one/config.xml');
+const LAYER_ONE_CONFIG_YAML_PATH = path.resolve(__dirname, './layer-one/config.yaml');
+const LAYER_ONE_CONFIG_YML_PATH = path.resolve(__dirname, './layer-one/config.yml');
 const LAYER_ONE_PATCH_JSON_PATH = path.resolve(__dirname, './layer-one/patch.json');
+const LAYER_ONE_PATCH_YAML_PATH = path.resolve(__dirname, './layer-one/patch.yaml');
+const LAYER_ONE_PATCH_YML_PATH = path.resolve(__dirname, './layer-one/patch.yml');
+const LAYER_ONE_PATCH_PROPERTIES_PATH = path.resolve(__dirname, './layer-one/patch.properties');
 const LAYER_ONE_B_CONFIG_JSON_PATH = path.resolve(__dirname, './layer-one-b/config.json');
 // Does not exist;
 const LAYER_TWO_CONFIG_JSON_PATH = path.resolve(__dirname, './layer-two/config.json');
 
-
 const LAYER_ONE_CONFIG_JSON = JSON.parse(fs.readFileSync(LAYER_ONE_CONFIG_JSON_PATH));
+const LAYER_ONE_CONFIG_PROPERTIES = Prop.parse(fs.readFileSync(LAYER_ONE_CONFIG_PROPERTIES_PATH).toString(), {namespaces: true});
+const LAYER_ONE_CONFIG_YAML = Yaml.parse(fs.readFileSync(LAYER_ONE_CONFIG_YAML_PATH).toString());
+const LAYER_ONE_CONFIG_YML = Yaml.parse(fs.readFileSync(LAYER_ONE_CONFIG_YML_PATH).toString());
 const LAYER_ONE_B_CONFIG_JSON = JSON.parse(fs.readFileSync(LAYER_ONE_B_CONFIG_JSON_PATH));
 const LAYER_ONE_PATCH_JSON = JSON.parse(fs.readFileSync(LAYER_ONE_PATCH_JSON_PATH));
+const LAYER_ONE_PATCH_YAML = Yaml.parse(fs.readFileSync(LAYER_ONE_PATCH_YAML_PATH).toString());
+const LAYER_ONE_PATCH_YML = Yaml.parse(fs.readFileSync(LAYER_ONE_PATCH_YML_PATH).toString());
+const LAYER_ONE_PATCH_PROPERTIES = Prop.parse(fs.readFileSync(LAYER_ONE_PATCH_PROPERTIES_PATH).toString());
 
 let ENV_KEY_1 = 'ENV_VAL_ONE';
 let ENV_KEY_2 = 'ENV_VAL_TWO';
@@ -22,11 +38,10 @@ let ENV_VALUE_1 = process.env[ENV_KEY_1];
 let ENV_VALUE_2 = process.env[ENV_KEY_2];
 let ENV_VALUE_3 = process.env[ENV_KEY_3];
 
-
 describe(
     'Config', () => {
         describe('fromFile()', () => {
-                it('should return loaded config when parameter is valid.', () => {
+                it('should return loaded config when JSON parameter is valid.', () => {
                         let conf = new Config()
                             .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
                             .get();
@@ -41,8 +56,69 @@ describe(
 
                         assert.deepStrictEqual(conf, {});
                     }
-                )
+                );
+                it('Should accept both YAML/YML', () => {
+                        let config = new Config()
+                            .fromFile(LAYER_ONE_CONFIG_YAML_PATH)
+                            .get();
 
+                        assert.deepStrictEqual(config, LAYER_ONE_CONFIG_YAML);
+
+                        config = new Config()
+                            .fromFile(LAYER_ONE_CONFIG_YML_PATH)
+                            .get();
+
+                        assert.deepStrictEqual(config, LAYER_ONE_CONFIG_YML);
+                    }
+                );
+                it('Should use custom parser when provided', () => {
+
+                        let config = new Config()
+                            .fromFile(LAYER_ONE_CONFIG_PROPERTIES_PATH, {customParser: str => Prop.parse(str, {namespaces: true})})
+                            .get();
+
+                        assert(config, LAYER_ONE_CONFIG_PROPERTIES);
+
+                    }
+                );
+                it('Should throw UnknownFileFormatError when file has no extension.', () => {
+
+                        assert.throws(() => {
+                                new Config()
+                                    .fromFile(LAYER_ONE_CONFIG_EXTENSIONLESS_PATH)
+                                    .get();
+                            },
+                            e => (e instanceof UnknownFileFormatError)
+                        );
+
+                    }
+                );
+                it('Should throw UnknownFileFormatError when file type is unknown, and no parser is provided.', () => {
+                        assert.throws(() => {
+                                new Config()
+                                    .fromFile(LAYER_ONE_CONFIG_XML_PATH)
+                                    .get();
+                            },
+                            e => (e instanceof UnknownFileFormatError)
+                        );
+
+                    }
+                );
+                it('Should throw ParseFailureError when parsing fails.', () => {
+                        assert.throws(() => {
+                                new Config()
+                                    .fromFile(LAYER_ONE_CONFIG_XML_PATH, {
+                                        customParser: () => {
+                                            throw Error('some parsing failure.');
+                                        }
+                                    })
+                                    .get();
+                            },
+                            e => (e instanceof ParseFailureError)
+                        );
+
+                    }
+                );
             }
         );
         describe('fromObject()', () => {
@@ -73,7 +149,7 @@ describe(
                         assert.deepStrictEqual(nullObject, {});
                         assert.deepStrictEqual(undefinedObject, {});
                     }
-                )
+                );
 
             }
         );
@@ -129,7 +205,7 @@ describe(
 
 describe(
     'FindFirstConfigProvider', () => {
-        // Will deprecate soon
+        // Will deprecate soon, an alias for orFile() no need for advanced testing.
         describe('or()', () => {
                 it('should not load if config is already found.', () => {
 
@@ -172,8 +248,75 @@ describe(
 
                         assert.deepStrictEqual(conf, LAYER_ONE_B_CONFIG_JSON);
                     }
-                )
+                );
+                it('Should accept both YAML/YML', () => {
+                        let config = new Config()
+                            .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                            .orFile(LAYER_ONE_CONFIG_YAML_PATH)
+                            .get();
 
+                        assert.deepStrictEqual(config, LAYER_ONE_CONFIG_YAML);
+
+                        config = new Config()
+                            .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                            .orFile(LAYER_ONE_CONFIG_YML_PATH)
+                            .get();
+
+                        assert.deepStrictEqual(config, LAYER_ONE_CONFIG_YML);
+                    }
+                );
+                it('Should use custom parser when provided', () => {
+
+                        let config = new Config()
+                            .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                            .orFile(LAYER_ONE_CONFIG_PROPERTIES_PATH, {customParser: str => Prop.parse(str, {namespaces: true})})
+                            .get();
+
+                        assert(config, LAYER_ONE_CONFIG_PROPERTIES);
+
+                    }
+                );
+                it('Should throw UnknownFileFormatError when file has no extension.', () => {
+
+                        assert.throws(() => {
+                                new Config()
+                                    .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                                    .orFile(LAYER_ONE_CONFIG_EXTENSIONLESS_PATH)
+                                    .get();
+                            },
+                            e => (e instanceof UnknownFileFormatError)
+                        );
+
+                    }
+                );
+                it('Should throw UnknownFileFormatError when file type is unknown, and no parser is provided.', () => {
+                        assert.throws(() => {
+                                new Config()
+                                    .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                                    .orFile(LAYER_ONE_CONFIG_XML_PATH)
+                                    .get();
+                            },
+                            e => (e instanceof UnknownFileFormatError)
+                        );
+
+                    }
+                );
+                it('Should throw ParseFailureError when parsing fails.', () => {
+                        assert.throws(() => {
+                                new Config()
+                                    .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                                    .orFile(LAYER_ONE_CONFIG_XML_PATH, {
+                                        customParser: () => {
+                                            throw Error('some parsing failure.');
+                                        }
+                                    })
+                                    .get();
+                            },
+                            e => (e instanceof ParseFailureError)
+                        );
+
+                    }
+                );
             }
         );
         describe('orObject()', () => {
@@ -251,6 +394,29 @@ describe(
 
             }
         );
+        describe('thenPatchWith()', () => {
+                it('should not throw if config is found.', function () {
+                        assert.doesNotThrow(() => {
+                                new Config()
+                                    .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
+                                    .thenPatchWith();
+                            }
+                        )
+                    }
+                );
+                it('should throw if config is not found.', function () {
+                        assert.throws(() => {
+                                new Config()
+                                    .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                                    .thenPatchWith();
+                            },
+                            e => (e instanceof NoConfigFoundError)
+                        )
+                    }
+                );
+
+            }
+        );
     }
 )
 
@@ -279,7 +445,88 @@ describe('PatchingConfigProvider', () => {
 
                         assert.deepStrictEqual(conf, LAYER_ONE_CONFIG_JSON);
                     }
-                )
+                );
+                it('Should accept both YAML/YML', () => {
+                        let conf = new Config()
+                            .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
+                            .thenPatchWith()
+                            .configFile(LAYER_ONE_PATCH_YAML_PATH)
+                            .get();
+
+                        assert.deepStrictEqual(conf['simple_keyone'], LAYER_ONE_PATCH_YAML['simple_keyone']);
+                        assert.deepStrictEqual(conf['simple_keytwo'], LAYER_ONE_PATCH_YAML['simple_keytwo']);
+                        assert.notDeepStrictEqual(conf['nested_valuethree'], LAYER_ONE_PATCH_YAML['nested_valuethree']);
+
+                        conf = new Config()
+                            .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
+                            .thenPatchWith()
+                            .configFile(LAYER_ONE_PATCH_YML_PATH)
+                            .get();
+
+                        assert.deepStrictEqual(conf['simple_keyone'], LAYER_ONE_PATCH_YML['simple_keyone']);
+                        assert.deepStrictEqual(conf['simple_keytwo'], LAYER_ONE_PATCH_YML['simple_keytwo']);
+                        assert.notDeepStrictEqual(conf['nested_valuethree'], LAYER_ONE_PATCH_YML['nested_valuethree']);
+
+                    }
+                );
+                it('Should use custom parser when provided', () => {
+
+                        let conf = new Config()
+                            .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
+                            .thenPatchWith()
+                            .configFile(LAYER_ONE_PATCH_PROPERTIES_PATH, {customParser: str => Prop.parse(str, {namespaces: true})})
+                            .get();
+
+                        assert.deepStrictEqual(conf['simple_keyone'], LAYER_ONE_PATCH_PROPERTIES['simple_keyone']);
+                        assert.deepStrictEqual(conf['simple_keytwo'], LAYER_ONE_PATCH_PROPERTIES['simple_keytwo']);
+                        assert.notDeepStrictEqual(conf['nested_valuethree'], LAYER_ONE_PATCH_PROPERTIES['nested_valuethree']);
+
+                    }
+                );
+                it('Should throw UnknownFileFormatError when file has no extension.', () => {
+
+                        assert.throws(() => {
+                                new Config()
+                                    .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
+                                    .thenPatchWith()
+                                    .configFile(LAYER_ONE_CONFIG_EXTENSIONLESS_PATH)
+                                    .get();
+                            },
+                            e => (e instanceof UnknownFileFormatError)
+                        );
+
+                    }
+                );
+                it('Should throw UnknownFileFormatError when file type is unknown, and no parser is provided.', () => {
+                        assert.throws(() => {
+                                new Config()
+                                    .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
+                                    .thenPatchWith()
+                                    .configFile(LAYER_ONE_CONFIG_XML_PATH)
+                                    .get();
+                            },
+                            e => (e instanceof UnknownFileFormatError)
+                        );
+
+                    }
+                );
+                it('Should throw ParseFailureError when parsing fails.', () => {
+                        assert.throws(() => {
+                                new Config()
+                                    .fromFile(LAYER_ONE_CONFIG_JSON_PATH)
+                                    .thenPatchWith()
+                                    .configFile(LAYER_ONE_CONFIG_XML_PATH, {
+                                        customParser: () => {
+                                            throw Error('some parsing failure.');
+                                        }
+                                    })
+                                    .get();
+                            },
+                            e => (e instanceof ParseFailureError)
+                        );
+
+                    }
+                );
             }
         );
         describe('patchWithEnv()', () => {
