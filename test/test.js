@@ -193,7 +193,6 @@ describe(
                             }
                         };
 
-
                         assert.throws(() => {
                             new Config()
                                 .fromEnv(prototype)

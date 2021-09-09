@@ -28,7 +28,7 @@ class Config {
      * @returns FindFirstConfigProvider
      */
     fromFile(absolutePath, options = {customParser: null}) {
-        const { logger } = this.#meta;
+        const {logger} = this.#meta;
 
         let object = _loadFile(absolutePath, options);
         let chainObject = this.fromObject(object);
@@ -49,7 +49,7 @@ class Config {
      * @returns FindFirstConfigProvider
      */
     fromEnv(prototype) {
-        const { logger } = this.#meta;
+        const {logger} = this.#meta;
         let object = {};
 
         if (_isDefinedNonNull(prototype) && _isNotEmpty(prototype)) {
@@ -59,7 +59,7 @@ class Config {
         let chainObject = this.fromObject(object);
 
         if (this.#meta.foundFirst) {
-            _tryLog(`Environment configuration with prototype ${ JSON.stringify(prototype) } found first, will use as configuration`, logger);
+            _tryLog(`Environment configuration with prototype ${JSON.stringify(prototype)} found first, will use as configuration`, logger);
         }
 
         return chainObject;
@@ -117,14 +117,20 @@ class FindFirstConfigProvider {
      * @returns FindFirstConfigProvider
      */
     orFile(absolutePath, options = {customParser: null}) {
-        const {foundFirst} = this.#meta;
+        const {foundFirst, logger} = this.#meta;
         let object = {};
 
         if (!foundFirst) {
             object = _loadFile(absolutePath, options);
         }
 
-        return this.orObject(object);
+        let self = this.orObject(object);
+
+        if (this.#meta.foundFirst) {
+            _tryLog(`Configuration ${absolutePath} found first, will use as configuration`, logger);
+        }
+
+        return self;
     }
 
     /**
@@ -135,12 +141,16 @@ class FindFirstConfigProvider {
      * @returns FindFirstConfigProvider
      */
     orEnv(prototype) {
-        const {foundFirst} = this.#meta;
+        const {foundFirst, logger} = this.#meta;
 
         if (!foundFirst) {
             if (_isDefinedNonNull(prototype) && _isNotEmpty(prototype)) {
                 let object = _pullEnvironmentPrototype(prototype);
                 this.orObject(object);
+
+                if (this.#meta.foundFirst) {
+                    _tryLog(`Environment configuration with prototype ${JSON.stringify(prototype)} found first, will use as configuration`, logger);
+                }
             }
         }
 
@@ -154,12 +164,13 @@ class FindFirstConfigProvider {
      * @returns FindFirstConfigProvider
      */
     orObject(jsonObject) {
-        const {config, foundFirst} = this.#meta;
+        const {config, foundFirst, logger} = this.#meta;
 
         if (!foundFirst) {
             if (_isDefinedNonNull(jsonObject) && _isNotEmpty(jsonObject)) {
                 _mergeConfigs(config, jsonObject);
                 this.#meta.foundFirst = true;
+                _tryLog(`Config object loaded.`, logger);
             }
         }
 
@@ -380,7 +391,7 @@ function _loadFile(absolutePath, options = {customParser: null}) {
 
 function _tryLog(message, logger) {
     let env = process.env['NODE_ENV'];
-    if (_isDefinedNonNull(logger) &&  (env !== 'production' && env !== 'test' )) {
+    if (_isDefinedNonNull(logger) && (env !== 'production' && env !== 'test')) {
         logger(message);
     }
 }
