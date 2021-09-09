@@ -17,6 +17,8 @@ class Config {
      * @param absolutePath Possible location of a configuration file
      * @param {function(string)=>JSON} options.customParser Custom parser for the config file, must accept fs.readFileSync().toString() and return JSON Object.
      * @param options parsing options, used JSON to future proof.
+     * @throws UnknownFileFormatError When passing a non YAML/JSON config without customParser, or when file extension is not known.
+     * @throws ParseFailureError When native JSON/YAML or customerParser fails to parse provided config.
      * @returns FindFirstConfigProvider
      */
     fromFile(absolutePath, options = {customParser: null}) {
@@ -76,6 +78,8 @@ class FindFirstConfigProvider {
      * @param absolutePath Possible location of a configuration file
      * @param {function(string)=>JSON} options.customParser Custom parser for the config file, must accept fs.readFileSync().toString() and return JSON Object.
      * @param options parsing options, used JSON to future proof.
+     * @throws UnknownFileFormatError When passing a non YAML/JSON config without customParser, or when file extension is not known.
+     * @throws ParseFailureError When native JSON/YAML or customerParser fails to parse provided config.
      * @returns FindFirstConfigProvider
      */
     or(absolutePath, options = {customParser: null}) {
@@ -88,6 +92,8 @@ class FindFirstConfigProvider {
      * @param absolutePath Possible location of a configuration file
      * @param {function(string)=>JSON} options.customParser Custom parser for the config file, must accept fs.readFileSync().toString() and return JSON Object.
      * @param options parsing options, used JSON to future proof.
+     * @throws UnknownFileFormatError When passing a non YAML/JSON config without customParser, or when file extension is not known.
+     * @throws ParseFailureError When native JSON/YAML or customerParser fails to parse provided config.
      * @returns FindFirstConfigProvider
      */
     orFile(absolutePath, options = {customParser: null}) {
@@ -144,6 +150,7 @@ class FindFirstConfigProvider {
      * Marks the transition from finding first config to
      * patching current config from another config file
      * or config assembled from the environment.
+     * @throws NoConfigFoundError When none of the patch alternatives are found, you can't patch a non existing configuration.
      * @returns PatchingConfigProvider
      */
     thenPatchWith() {
@@ -179,6 +186,8 @@ class PatchingConfigProvider {
      * @param absolutePath Possible location of a configuration file
      * @param {function(string)=>JSON} options.customParser Custom parser for the config file, must accept fs.readFileSync().toString() and return JSON Object.
      * @param options parsing options, used JSON to future proof.
+     * @throws UnknownFileFormatError When passing a non YAML/JSON config without customParser, or when file extension is not known.
+     * @throws ParseFailureError When native JSON/YAML or customerParser fails to parse provided config.
      * @returns PatchingConfigProvider
      */
     configFile(absolutePath, options = {customParser: null}) {
