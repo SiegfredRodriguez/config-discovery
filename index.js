@@ -5,8 +5,14 @@ const {UnknownFileFormatError, ParseFailureError, NoConfigFoundError} = require(
 class Config {
     #meta;
 
-    constructor(options = {parser: JSON.parse}) {
-        this.#meta = {config: {}, parser: options.parser};
+    /**
+     *
+     * @param options config wide options
+     * @param options.parser IGNORED, this is legacy, will remove in the future.
+     * @param options.logger Logger function, function(string)
+     */
+    constructor(options = {parser: JSON.parse, logger: console.log}) {
+        this.#meta = {config: {}, logger: options.logger};
     }
 
 
@@ -22,8 +28,16 @@ class Config {
      * @returns FindFirstConfigProvider
      */
     fromFile(absolutePath, options = {customParser: null}) {
+        const { logger } = this.#meta;
+
         let object = _loadFile(absolutePath, options);
-        return this.fromObject(object);
+        let chainObject = this.fromObject(object);
+
+        if (this.#meta.foundFirst) {
+            _tryLog(`Configuration ${absolutePath} found first, will use as configuration`, logger);
+        }
+
+        return chainObject;
     }
 
     /**
@@ -35,13 +49,20 @@ class Config {
      * @returns FindFirstConfigProvider
      */
     fromEnv(prototype) {
+        const { logger } = this.#meta;
         let object = {};
 
         if (_isDefinedNonNull(prototype) && _isNotEmpty(prototype)) {
             object = _pullEnvironmentPrototype(prototype);
         }
 
-        return this.fromObject(object);
+        let chainObject = this.fromObject(object);
+
+        if (this.#meta.foundFirst) {
+            _tryLog(`Environment configuration with prototype ${ JSON.stringify(prototype) } found first, will use as configuration`, logger);
+        }
+
+        return chainObject;
     }
 
     /**
@@ -52,16 +73,15 @@ class Config {
      * @returns FindFirstConfigProvider
      */
     fromObject(jsonObject) {
-        const {config} = this.#meta;
+        const {config, logger} = this.#meta;
 
         if (_isDefinedNonNull(jsonObject) && _isNotEmpty(jsonObject)) {
             _mergeConfigs(config, jsonObject);
             this.#meta.foundFirst = true;
+            _tryLog(`Config object loaded.`, logger);
         }
 
-        let metadata = this.#meta;
-        this.#meta = undefined;
-        return new FindFirstConfigProvider(metadata);
+        return new FindFirstConfigProvider(this.#meta);
     }
 }
 
@@ -75,7 +95,7 @@ class FindFirstConfigProvider {
     /**
      * @deprecated
      * Replaced with orFile(absolutePath) for interface consistency.
-     * @param absolutePath Possible location of a configuration file
+     * @param absolutePath Possible location of a configuration file.
      * @param {function(string)=>JSON} options.customParser Custom parser for the config file, must accept fs.readFileSync().toString() and return JSON Object.
      * @param options parsing options, used JSON to future proof.
      * @throws UnknownFileFormatError When passing a non YAML/JSON config without customParser, or when file extension is not known.
@@ -169,6 +189,11 @@ class FindFirstConfigProvider {
      * @returns JSON
      */
     get() {
+
+        if (!this.#meta.foundFirst) {
+            throw new NoConfigFoundError(`No configuration found.`);
+        }
+
         return this.#meta.config;
     }
 }
@@ -351,6 +376,13 @@ function _loadFile(absolutePath, options = {customParser: null}) {
     }
 
     return object;
+}
+
+function _tryLog(message, logger) {
+    let env = process.env['NODE_ENV'];
+    if (_isDefinedNonNull(logger) &&  (env !== 'production' && env !== 'test' )) {
+        logger(message);
+    }
 }
 
 const yamlParser = (dataString) => {

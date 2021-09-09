@@ -49,12 +49,12 @@ describe(
                         assert.deepStrictEqual(conf, LAYER_ONE_CONFIG_JSON);
                     }
                 );
-                it('should return empty json when parameter is not found or not valid.', () => {
-                        let conf = new Config()
-                            .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
-                            .get();
-
-                        assert.deepStrictEqual(conf, {});
+                it('should throw NoConfigFoundError when no config is found', () => {
+                        assert.throws(() => {
+                            new Config()
+                                .fromFile(LAYER_TWO_CONFIG_JSON_PATH)
+                                .get();
+                        }, e => (e instanceof NoConfigFoundError));
                     }
                 );
                 it('Should accept both YAML/YML', () => {
@@ -132,22 +132,25 @@ describe(
                         assert.deepStrictEqual(conf, jsonObject);
                     }
                 );
-                it('should return empty json when parameter is not found or not valid.', () => {
-                        let emptyObject = new Config()
-                            .fromObject({})
-                            .get();
+                it('should throw NoConfigFoundError when no config is found', () => {
 
-                        let nullObject = new Config()
-                            .fromObject({})
-                            .get();
+                        assert.throws(() => {
+                            new Config()
+                                .fromObject({})
+                                .get();
+                        }, e => (e instanceof NoConfigFoundError));
 
-                        let undefinedObject = new Config()
-                            .fromObject({})
-                            .get();
+                        assert.throws(() => {
+                            new Config()
+                                .fromObject(null)
+                                .get();
+                        }, e => (e instanceof NoConfigFoundError));
 
-                        assert.deepStrictEqual(emptyObject, {});
-                        assert.deepStrictEqual(nullObject, {});
-                        assert.deepStrictEqual(undefinedObject, {});
+                        assert.throws(() => {
+                            new Config()
+                                .fromObject(undefined)
+                                .get();
+                        }, e => (e instanceof NoConfigFoundError));
                     }
                 );
 
@@ -180,7 +183,7 @@ describe(
                         assert.deepStrictEqual(conf, expected);
                     }
                 );
-                it('should return empty json when when prototype is not satisfied.', () => {
+                it('should throw NoConfigFoundError when prototype is not satisfied.', () => {
 
                         let prototype = {
                             field_one: ENV_KEY_1,
@@ -190,11 +193,12 @@ describe(
                             }
                         };
 
-                        let conf = new Config()
-                            .fromEnv(prototype)
-                            .get();
 
-                        assert.deepStrictEqual(conf, {});
+                        assert.throws(() => {
+                            new Config()
+                                .fromEnv(prototype)
+                                .get();
+                        }, e => (e instanceof NoConfigFoundError));
                     }
                 )
 
