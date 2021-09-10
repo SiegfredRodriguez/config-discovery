@@ -76,10 +76,40 @@ class Config {
 
     /**
      * Will try to load initial config from the environment based
-     * on provided prototype. If prototype is not satisfied it does.
+     * on provided prototype. If prototype is not satisfied it does
      * nothing.
      *
-     * @param prototype Prototype for an object to generate from the ENV
+     * @example
+     *
+     * // Given example environment variables exist
+     * // ENV_VARIABLE_URL="dev-db:5432/dev"
+     * // ENV_VARIABLE_USERNAME="dev"
+     * // ENV_VARIABLE_PASSWORD="p@sSword123"
+     *
+     * let prototype = {
+     *     url: 'ENV_VARIABLE_URL',
+     *     nested: {
+     *         username: 'ENV_VARIABLE_USERNAME',
+     *         password: 'ENV_VARIABLE_PASSWORD'
+     *     }
+     * };
+     *
+     *
+     * let config = new Config()
+     *     .fromEnv(prototype)
+     *     .get();
+     *
+     *
+     * // Will result in
+     * // let config = {
+     * //     url: 'dev-db:5432/dev',
+     * //     nested: {
+     * //         username: 'dev',
+     * //         password: 'p@sSword123'
+     * //     }
+     * // };
+     *
+     * @param {JSON} prototype Prototype for an object to generate from the ENV
      * @returns {FindFirstConfigProvider}
      */
     fromEnv(prototype) {
