@@ -133,7 +133,23 @@ class Config {
      * Will try to load initial config from provided object,
      * if jsonObject is empty or not valid, will ignore.
      *
-     * @param jsonObject A possibly non empty object
+     * Intended for quick debugging or setup for a follow up patching.
+     *
+     * Though I understand that it may not be necessary in this context.
+     * @example
+     *
+     * let debugConfig = {
+     *     username: 'user',
+     *     password: 'password'
+     * };
+     *
+     *
+     * let config = new Config()
+     *     .fromObject(debugConfig)
+     *     .get();
+     *
+     *
+     * @param {JSON} jsonObject A possibly non empty object
      * @returns {FindFirstConfigProvider}
      */
     fromObject(jsonObject) {
