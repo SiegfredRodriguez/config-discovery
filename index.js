@@ -2,17 +2,38 @@ let fs = require('fs');
 const path = require("path");
 const {UnknownFileFormatError, ParseFailureError, NoConfigFoundError} = require("./errors");
 
+/**
+ *  Custom parser callback
+ *
+ *  @callback Parser
+ *  @param {string} rawString - String loaded from fs.readSync().toString().
+ *  @return {JSON} - Parsed JSON object.
+ */
+
+/**
+ *  Custom parser callback
+ *
+ *  @callback Logger
+ *  @param {string} rawString - String loaded from fs.readSync().toString().
+ *  @return {void|any} - Parsed JSON object.
+ */
+
+/**
+ * @class
+ * @classdesc Main class of config-discovery, every usage starts with instantiating this class.
+ */
 class Config {
     #meta;
 
+    #constructor_defaults = {parser: JSON.parse, logger: console.log}
+
     /**
-     *
-     * @param options config wide options
-     * @param options.parser IGNORED, this is legacy, will remove in the future.
-     * @param options.logger Logger function, function(string)
+     * @param [options.parser=JSON.parse] IGNORED, this is legacy, will remove in the future.
+     * @param [options.logger=console.log] Logger function, function(string)
      */
     constructor(options = {parser: JSON.parse, logger: console.log}) {
-        this.#meta = {config: {}, logger: options.logger};
+        let _options = _mergeConfigs(this.#constructor_defaults, options);
+        this.#meta = {config: {}, logger: _options.logger};
     }
 
 
@@ -20,12 +41,25 @@ class Config {
      * Will try to load initial config from provided
      * absolutePath. If config file is not found, it does nothing.
      *
-     * @param absolutePath Possible location of a configuration file
-     * @param {function(string)=>JSON} options.customParser Custom parser for the config file, must accept fs.readFileSync().toString() and return JSON Object.
-     * @param options parsing options, used JSON to future proof.
-     * @throws UnknownFileFormatError When passing a non YAML/JSON config without customParser, or when file extension is not known.
-     * @throws ParseFailureError When native JSON/YAML or customerParser fails to parse provided config.
-     * @returns FindFirstConfigProvider
+     * @example
+     *
+     *  // With out-of-the-box supported JSON/YAML
+     *  let config = new Config()
+     *                      .fromFile('/config/config.json')
+     *                      .get();
+     *
+     *  // Or with a custom file
+     *  let xmlParser = (...) => .... ;
+     *  let config = new Config()
+     *                      .fromFile('/config/config.xml', xmlParser)
+     *                      .get();
+     *
+     *
+     * @param {string} absolutePath - Possible location of a configuration file
+     * @param {Parser} [options.customParser=null] - Custom parser for the config file, must accept fs.readFileSync().toString() and return JSON Object.
+     * @throws {UnknownFileFormatError} - When passing a non YAML/JSON config without customParser, or when file extension is not known.
+     * @throws {ParseFailureError} - When native JSON/YAML or customParser fails to parse provided config.
+     * @returns {FindFirstConfigProvider}
      */
     fromFile(absolutePath, options = {customParser: null}) {
         const {logger} = this.#meta;
@@ -46,7 +80,7 @@ class Config {
      * nothing.
      *
      * @param prototype Prototype for an object to generate from the ENV
-     * @returns FindFirstConfigProvider
+     * @returns {FindFirstConfigProvider}
      */
     fromEnv(prototype) {
         const {logger} = this.#meta;
@@ -70,7 +104,7 @@ class Config {
      * if jsonObject is empty or not valid, will ignore.
      *
      * @param jsonObject A possibly non empty object
-     * @returns FindFirstConfigProvider
+     * @returns {FindFirstConfigProvider}
      */
     fromObject(jsonObject) {
         const {config, logger} = this.#meta;
@@ -85,9 +119,16 @@ class Config {
     }
 }
 
+/**
+ * @class
+ * UTILITY CLASS DO NOT INSTANTIATE.
+ */
 class FindFirstConfigProvider {
     #meta
 
+    /**
+     * @ignore
+     */
     constructor(meta) {
         this.#meta = meta;
     }
@@ -95,12 +136,12 @@ class FindFirstConfigProvider {
     /**
      * @deprecated
      * Replaced with orFile(absolutePath) for interface consistency.
-     * @param absolutePath Possible location of a configuration file.
-     * @param {function(string)=>JSON} options.customParser Custom parser for the config file, must accept fs.readFileSync().toString() and return JSON Object.
-     * @param options parsing options, used JSON to future proof.
-     * @throws UnknownFileFormatError When passing a non YAML/JSON config without customParser, or when file extension is not known.
-     * @throws ParseFailureError When native JSON/YAML or customerParser fails to parse provided config.
-     * @returns FindFirstConfigProvider
+     *
+     * @param {string} absolutePath - Possible location of a configuration file
+     * @param {Parser} [options.customParser=null] - Custom parser for the config file, must accept fs.readFileSync().toString() and return JSON Object.
+     * @throws {UnknownFileFormatError} - When passing a non YAML/JSON config without customParser, or when file extension is not known.
+     * @throws {ParseFailureError} - When native JSON/YAML or customParser fails to parse provided config.
+     * @returns {FindFirstConfigProvider}
      */
     or(absolutePath, options = {customParser: null}) {
         return this.orFile(absolutePath, options);
@@ -109,12 +150,12 @@ class FindFirstConfigProvider {
     /**
      * Will try to load configuration from absolutePath if the previous
      * attempts from from*() or another or*() failed.
-     * @param absolutePath Possible location of a configuration file
-     * @param {function(string)=>JSON} options.customParser Custom parser for the config file, must accept fs.readFileSync().toString() and return JSON Object.
-     * @param options parsing options, used JSON to future proof.
-     * @throws UnknownFileFormatError When passing a non YAML/JSON config without customParser, or when file extension is not known.
-     * @throws ParseFailureError When native JSON/YAML or customerParser fails to parse provided config.
-     * @returns FindFirstConfigProvider
+     *
+     * @param {string} absolutePath - Possible location of a configuration file
+     * @param {Parser} [options.customParser=null] - Custom parser for the config file, must accept fs.readFileSync().toString() and return JSON Object.
+     * @throws {UnknownFileFormatError} - When passing a non YAML/JSON config without customParser, or when file extension is not known.
+     * @throws {ParseFailureError} - When native JSON/YAML or customParser fails to parse provided config.
+     * @returns {FindFirstConfigProvider}
      */
     orFile(absolutePath, options = {customParser: null}) {
         const {foundFirst, logger} = this.#meta;
@@ -138,7 +179,7 @@ class FindFirstConfigProvider {
      * based on provided prototype if the previous
      * attempts from from*() or another or*() failed.
      * @param prototype Prototype for an object to generate from the ENV
-     * @returns FindFirstConfigProvider
+     * @returns {FindFirstConfigProvider}
      */
     orEnv(prototype) {
         const {foundFirst, logger} = this.#meta;
@@ -161,7 +202,7 @@ class FindFirstConfigProvider {
      * Will try to load configuration from provided object if the previous
      * attempt from from*() or another or*() failed.
      * @param jsonObject A possibly non empty jsonObject
-     * @returns FindFirstConfigProvider
+     * @returns {FindFirstConfigProvider}
      */
     orObject(jsonObject) {
         const {config, foundFirst, logger} = this.#meta;
@@ -182,7 +223,7 @@ class FindFirstConfigProvider {
      * patching current config from another config file
      * or config assembled from the environment.
      * @throws NoConfigFoundError When none of the patch alternatives are found, you can't patch a non existing configuration.
-     * @returns PatchingConfigProvider
+     * @returns {PatchingConfigProvider}
      */
     thenPatchWith() {
 
@@ -197,7 +238,7 @@ class FindFirstConfigProvider {
 
     /**
      * Will return the configuration.
-     * @returns JSON
+     * @returns {JSON} The configuration object.
      */
     get() {
 
@@ -209,6 +250,10 @@ class FindFirstConfigProvider {
     }
 }
 
+/**
+ * @class
+ *  UTILITY CLASS DO NOT INSTANTIATE.
+ */
 class PatchingConfigProvider {
     #meta
 
@@ -219,12 +264,12 @@ class PatchingConfigProvider {
     /**
      * Will try to load specified config file,
      * and override any existing config key, and append non existing ones.
-     * @param absolutePath Possible location of a configuration file
-     * @param {function(string)=>JSON} options.customParser Custom parser for the config file, must accept fs.readFileSync().toString() and return JSON Object.
-     * @param options parsing options, used JSON to future proof.
-     * @throws UnknownFileFormatError When passing a non YAML/JSON config without customParser, or when file extension is not known.
-     * @throws ParseFailureError When native JSON/YAML or customerParser fails to parse provided config.
-     * @returns PatchingConfigProvider
+     *
+     * @param {string} absolutePath - Possible location of a configuration file
+     * @param {Parser} [options.customParser=null] - Custom parser for the config file, must accept fs.readFileSync().toString() and return JSON Object.
+     * @throws {UnknownFileFormatError} - When passing a non YAML/JSON config without customParser, or when file extension is not known.
+     * @throws {ParseFailureError} - When native JSON/YAML or customParser fails to parse provided config.
+     * @returns {PatchingConfigProvider}
      */
     configFile(absolutePath, options = {customParser: null}) {
         let {logger} = this.#meta;
@@ -244,7 +289,7 @@ class PatchingConfigProvider {
      * Replaced with env(prototype) for interface consistency.
      *
      * @param prototype Prototype of expected object from the environment.
-     * @returns PatchingConfigProvider
+     * @returns {PatchingConfigProvider}
      */
     patchWithEnv(prototype) {
         return this.env(prototype);
@@ -256,7 +301,7 @@ class PatchingConfigProvider {
      *  from environment prototype.
      *
      * @param prototype
-     * @returns PatchingConfigProvider
+     * @returns {PatchingConfigProvider}
      */
     env(prototype) {
         let {logger} = this.#meta;
@@ -278,7 +323,7 @@ class PatchingConfigProvider {
      *  its is defined and not empty.
      *
      * @param jsonObject
-     * @returns PatchingConfigProvider
+     * @returns {PatchingConfigProvider}
      */
     object(jsonObject) {
 
@@ -291,6 +336,10 @@ class PatchingConfigProvider {
         return this;
     }
 
+    /**
+     * Will return the configuration.
+     * @returns {JSON} The configuration object.
+     */
     get() {
         _tryLog(`WARNING: No patches were found and non were applied.`);
         return this.#meta.config;
@@ -298,9 +347,7 @@ class PatchingConfigProvider {
 }
 
 /**
- *
- *   Merge properly, override only common keys.
- *
+ *  @ignore
  * */
 function _mergeConfigs(target, source) {
 
@@ -322,12 +369,7 @@ function _mergeConfigs(target, source) {
 }
 
 /**
- *
- *  WARNING: Recursive, will try to improve.
- *
- *  All or nothing approach, if expected fields in prototype is not satisfied,
- *  return empty.
- *
+ *  @ignore
  * */
 function _pullEnvironmentPrototype(prototype) {
     let result = {};
@@ -354,14 +396,23 @@ function _pullEnvironmentPrototype(prototype) {
     return result;
 }
 
+/**
+ * @ignore
+ */
 function _isNotEmpty(object) {
     return Object.keys(object).length > 0;
 }
 
+/**
+ * @ignore
+ */
 function _isDefinedNonNull(object) {
     return (object !== undefined && object !== null);
 }
 
+/**
+ * @ignore
+ */
 function _getParser(filePath) {
     let extension = path.extname(filePath);
 
@@ -380,10 +431,7 @@ function _getParser(filePath) {
 }
 
 /**
- *
- *   if file does not exist, will return empty object,
- *   other abnormalities will throw known errors.
- *
+ *  @ignore
  * */
 function _loadFile(absolutePath, options = {customParser: null}) {
 
@@ -403,6 +451,9 @@ function _loadFile(absolutePath, options = {customParser: null}) {
     return object;
 }
 
+/**
+ * @ignore
+ */
 function _tryLog(message, logger) {
     let env = process.env['NODE_ENV'];
     if (_isDefinedNonNull(logger) && (env !== 'production' && env !== 'test')) {
@@ -410,13 +461,23 @@ function _tryLog(message, logger) {
     }
 }
 
+/**
+ * @ignore
+ */
 const yamlParser = (dataString) => {
     return require('yaml').parse(dataString);
 }
+
+/**
+ * @ignore
+ */
 const jsonParser = (dataString) => {
     return JSON.parse(dataString);
 }
 
+/**
+ * @ignore
+ */
 const KNOWN_FILE_PARSER = {
     yaml: yamlParser,
     yml: yamlParser,
