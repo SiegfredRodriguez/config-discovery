@@ -283,6 +283,27 @@ class FindFirstConfigProvider {
     /**
      * Will try to load configuration from provided object if the previous
      * attempt from from*() or another or*() failed.
+     *
+     * Intended for quick debugging, and in code default configurations
+     *
+     * Though I understand that it may not be necessary in this context.
+     * @example
+     *
+     * let debugConfig = {
+     *     dbUrl: 'debugdb:5432/debugdb'
+     *     credentials: {
+     *       username: 'user',
+     *       password: 'password'
+     *     }
+     * };
+     *
+     *
+     * let config = new Config()
+     *     .fromFile('/configs/production-config.yaml')
+     *     .orObject(debugConfig)
+     *     .get();
+     *
+     *
      * @param jsonObject A possibly non empty jsonObject
      * @returns {FindFirstConfigProvider}
      */
@@ -372,7 +393,7 @@ class PatchingConfigProvider {
      *  // With out-of-the-box support for JSON/YAML
      *  let config = new Config()
      *      .fromFile('/config/config.json')
-     *      .patchWith()
+     *      .thenPatchWith()
      *      .configFile('/etc/credentials/patch.yaml')
      *      .get();
      *
@@ -381,7 +402,7 @@ class PatchingConfigProvider {
      *
      *  let config = new Config()
      *      .fromFile('/config/config.yaml')
-     *      .patchWith()
+     *      .thenPatchWith()
      *      .orFile('/etc/configs/patch.properties' propParser)
      *      .get();
      *
@@ -477,6 +498,26 @@ class PatchingConfigProvider {
      *
      *  Will try to patch current config with JSON object if
      *  its is defined and not empty.
+     *
+     * Intended for quick debugging, and in code default configurations
+     *
+     * Though I understand that it may not be necessary in this context.
+     * @example
+     *
+     * let debugPatch = {
+     *     dbUrl: 'debugdb:5432/debugdb'
+     *     credentials: {
+     *       username: 'user',
+     *       password: 'password'
+     *     }
+     * };
+     *
+     *
+     * let config = new Config()
+     *     .fromFile('/configs/production-config.yaml')
+     *     .thenPatchWith()
+     *     .object(debugConfig)
+     *     .get();
      *
      * @param jsonObject
      * @returns {PatchingConfigProvider}
