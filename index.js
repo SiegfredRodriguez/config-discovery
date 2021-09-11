@@ -527,7 +527,7 @@ class PatchingConfigProvider {
         if (_isDefinedNonNull(jsonObject) && _isNotEmpty(jsonObject)) {
             let {config} = this.#meta;
             _mergeConfigs(config, jsonObject);
-            _tryLog(`Applied config object patch`);
+            _tryLog(`Applied config object patch`, this.#meta.logger);
         }
 
         return this;
@@ -538,7 +538,7 @@ class PatchingConfigProvider {
      * @returns {JSON} The configuration object.
      */
     get() {
-        _tryLog(`WARNING: No patches were found and non were applied.`);
+        // _tryLog(`WARNING: No patches were found and non were applied.`, this.#meta.logger);
         return this.#meta.config;
     }
 }
