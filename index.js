@@ -228,6 +228,38 @@ class FindFirstConfigProvider {
      * Will try to load configuration from environment
      * based on provided prototype if the previous
      * attempts from from*() or another or*() failed.
+     *
+     * @example
+     *
+     * // Given example environment variables exist
+     * // ENV_VARIABLE_URL="dev-db:5432/dev"
+     * // ENV_VARIABLE_USERNAME="dev"
+     * // ENV_VARIABLE_PASSWORD="p@sSword123"
+     *
+     * let prototype = {
+     *     url: 'ENV_VARIABLE_URL',
+     *     nested: {
+     *         username: 'ENV_VARIABLE_USERNAME',
+     *         password: 'ENV_VARIABLE_PASSWORD'
+     *     }
+     * };
+     *
+     *
+     * let config = new Config()
+     *     .fromFile('/configs/non-existing-config.yaml')
+     *     .orEnv(prototype)
+     *     .get();
+     *
+     * // Will result in this, if the previous config was not found.
+     * //
+     * // let config = {
+     * //     url: 'dev-db:5432/dev',
+     * //     nested: {
+     * //         username: 'dev',
+     * //         password: 'p@sSword123'
+     * //     }
+     * // };
+     *
      * @param prototype Prototype for an object to generate from the ENV
      * @returns {FindFirstConfigProvider}
      */
@@ -388,6 +420,41 @@ class PatchingConfigProvider {
      *
      *  Will try to patch current config with JSON object generated
      *  from environment prototype.
+     *
+     * @example
+     *
+     * // Given example
+     * // ENV_VARIABLE_USERNAME="dev"
+     * // ENV_VARIABLE_PASSWORD="p@sSword123"
+     * //
+     * // config.yaml --
+     * // dbUrl: 'dev-db:5432/dev'
+     * //
+     * //
+     *
+     * let env_credentials = {
+     *     credentials: {
+     *         username: 'ENV_VARIABLE_USERNAME',
+     *         password: 'ENV_VARIABLE_PASSWORD'
+     *     }
+     * };
+     *
+     *
+     * let config = new Config()
+     *     .fromFile('/configs/config.yaml')
+     *     .thenPatchWith()
+     *     .env(env_credentials)
+     *     .get();
+     *
+     *
+     * // Will result in
+     * // let config = {
+     * //     dbUrl: 'dev-db:5432/dev',
+     * //     nested: {
+     * //         username: 'dev',
+     * //         password: 'p@sSword123'
+     * //     }
+     * // };
      *
      * @param prototype
      * @returns {PatchingConfigProvider}
