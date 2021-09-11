@@ -3,22 +3,6 @@ const path = require("path");
 const {UnknownFileFormatError, ParseFailureError, NoConfigFoundError} = require("./errors");
 
 /**
- *  Custom parser callback
- *
- *  @callback Parser
- *  @param {string} rawString - String loaded from fs.readSync().toString().
- *  @return {JSON} - Parsed JSON object.
- */
-
-/**
- *  Custom parser callback
- *
- *  @callback Logger
- *  @param {string} rawString - String loaded from fs.readSync().toString().
- *  @return {void|any} - Parsed JSON object.
- */
-
-/**
  * @class
  * @classdesc Main class of config-discovery, every usage starts with instantiating this class.
  */
@@ -43,16 +27,16 @@ class Config {
      *
      * @example
      *
-     *  // With out-of-the-box supported JSON/YAML
+     *  // With out-of-the-box support for JSON/YAML
      *  let config = new Config()
-     *                      .fromFile('/config/config.json')
-     *                      .get();
+     *      .fromFile('/config/config.json')
+     *      .get();
      *
      *  // Or with a custom file
      *  let xmlParser = (...) => .... ;
      *  let config = new Config()
-     *                      .fromFile('/config/config.xml', xmlParser)
-     *                      .get();
+     *      .fromFile('/config/config.xml', xmlParser)
+     *      .get();
      *
      *
      * @param {string} absolutePath - Possible location of a configuration file
@@ -173,7 +157,7 @@ class FindFirstConfigProvider {
     #meta
 
     /**
-     * @ignore
+     * @private
      */
     constructor(meta) {
         this.#meta = meta;
@@ -196,6 +180,26 @@ class FindFirstConfigProvider {
     /**
      * Will try to load configuration from absolutePath if the previous
      * attempts from from*() or another or*() failed.
+     *
+     * @example
+     *
+     *  // With out-of-the-box support for JSON/YAML
+     *  let config = new Config()
+     *      .fromFile('/config/config.json')
+     *      .orFile('/var/config.yaml')
+     *      .orFile('config.yml')
+     *      .get();
+     *
+     *  // Or with a custom file
+     *  let xmlParser = (string) => JSON ;
+     *  let propParser = (string) => JSON ;
+     *
+     *  let config = new Config()
+     *      .fromFile('/config/config.yaml')
+     *      .orFile('/var/config.xml',  xmlParser)
+     *      .orFile('/etc/configs/config.properties' propParser)
+     *      .get();
+     *
      *
      * @param {string} absolutePath - Possible location of a configuration file
      * @param {Parser} [options.customParser=null] - Custom parser for the config file, must accept fs.readFileSync().toString() and return JSON Object.
@@ -303,13 +307,52 @@ class FindFirstConfigProvider {
 class PatchingConfigProvider {
     #meta
 
+    /**
+     * @private
+     */
     constructor(meta) {
         this.#meta = meta;
     }
 
     /**
      * Will try to load specified config file,
-     * and override any existing config key, and append non existing ones.
+     * and patch current configuration.
+     *
+     * @example
+     *
+     *  // Given Example
+     *  //
+     *  //  patch.yaml --
+     *  //  credentials:
+     *  //    username: user
+     *  //    password: mypassword
+     *  //
+     *  //  config.json --
+     *  //  {
+     *  //     "url": "database:5432/devdb"
+     *  //  }
+     *  //
+     *  //  patch.properties --
+     *  //  credentials.username = user
+     *  //  credentials.password = mypassword
+     *  //
+     *
+     *  // With out-of-the-box support for JSON/YAML
+     *  let config = new Config()
+     *      .fromFile('/config/config.json')
+     *      .patchWith()
+     *      .configFile('/etc/credentials/patch.yaml')
+     *      .get();
+     *
+     *  // Or with a custom file
+     *  let propParser = (string) => JSON ;
+     *
+     *  let config = new Config()
+     *      .fromFile('/config/config.yaml')
+     *      .patchWith()
+     *      .orFile('/etc/configs/patch.properties' propParser)
+     *      .get();
+     *
      *
      * @param {string} absolutePath - Possible location of a configuration file
      * @param {Parser} [options.customParser=null] - Custom parser for the config file, must accept fs.readFileSync().toString() and return JSON Object.
@@ -531,3 +574,20 @@ const KNOWN_FILE_PARSER = {
 };
 
 module.exports = Config
+
+
+/**
+ *  Custom parser callback
+ *
+ *  @callback Parser
+ *  @param {string} rawString - String loaded from fs.readSync().toString().
+ *  @return {JSON} - Parsed JSON object.
+ */
+
+/**
+ *  Custom parser callback
+ *
+ *  @callback Logger
+ *  @param {string} rawString - String loaded from fs.readSync().toString().
+ *  @return {void|any} - Parsed JSON object.
+ */
